@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Amy七彩弹珠乐园-移动版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Zcool+KuaiLe&display=swap');
+
+        /* --- Base Styles --- */
+        body {
+            background-color: #b3e5fc;
+            background-image: radial-gradient(#4fc3f7 20%, transparent 20%), radial-gradient(#81d4fa 20%, transparent 20%);
+            background-position: 0 0, 25px 25px;
+            background-size: 50px 50px;
+            color: #333;
+            font-family: 'Zcool KuaiLe', cursive, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+        }
+
+        /* --- Mobile Specific Layout --- */
+        #scene {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 600px; /* Limit max width on larger mobile screens */
+            max-height: 1000px;
+            background: linear-gradient(to bottom, #fff9c4, #ffe0b2);
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 8px solid #ff8f00;
+            z-index: 10;
+        }
+
+        /* --- Side Panels (Hidden by default on mobile) --- */
+        #log-panel, #side-panel {
+            position: fixed;
+            top: 0;
+            height: 100%;
+            width: 260px;
+            background: rgba(255, 255, 255, 0.98);
+            z-index: 1002; /* Increased z-index */
+            transition: transform 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        #log-panel {
+            left: 0;
+            transform: translateX(-100%);
+            border-right: 4px solid #8e24aa;
+        }
+
+        #side-panel {
+            right: 0;
+            transform: translateX(100%);
+            border-left: 4px solid #8e24aa;
+        }
+
+        #log-panel.open, #side-panel.open {
+            transform: translateX(0);
+        }
+
+        #menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001; /* Increased z-index */
+            display: none;
+        }
+        #menu-overlay.show {
+            display: block;
+        }
+
+
+        /* --- Hamburger Menu Button --- */
+        #menu-toggle {
+            position: fixed; /* Changed to fixed */
+            top: 25px;
+            right: 25px;
+            width: 40px;
+            height: 40px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            z-index: 1003; /* Increased z-index */
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+            border: 2px solid white;
+        }
+        #menu-toggle .line {
+            width: 20px;
+            height: 2px;
+            background: white;
+            transition: all 0.3s;
+        }
+        #menu-toggle.open .line1 { transform: rotate(45deg) translate(4px, 4px); }
+        #menu-toggle.open .line2 { opacity: 0; }
+        #menu-toggle.open .line3 { transform: rotate(-45deg) translate(4px, -4px); }
+
+
+        /* --- Original Styles (with minor adjustments) --- */
+        #top-panel{flex-shrink:0;height:180px;background:linear-gradient(to bottom,#9c27b0,#7b1fa2);border-bottom:6px solid #4a148c;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;padding:15px 15px 10px 15px;z-index:20;box-shadow:0 5px 15px rgba(0,0,0,.3);position:relative}
+        .screw{position:absolute;width:10px;height:10px;border-radius:50%;background:#bdc3c7;box-shadow:inset 1px 1px 2px #fff,1px 1px 2px rgba(0,0,0,.5)}
+        .screw.tl{top:10px;left:10px}.screw.tr{top:10px;right:10px}
+        .panel-row{display:flex;width:100%;justify-content:space-between;align-items:center;margin-bottom:8px}
+        .display-box{background:#263238;border:2px solid #546e7a;border-radius:10px;padding:3px 10px;text-align:center;min-width:80px;box-shadow:inset 0 2px 5px rgba(0,0,0,.5),0 2px 2px rgba(255,255,255,.1);position:relative}
+        .display-label{font-size:11px;color:#80cbc4;margin-bottom:1px}
+        .display-value{font-family:'Courier New',monospace;font-weight:700;font-size:20px;color:#ffeb3b;text-shadow:0 0 5px rgba(255,235,59,.5);line-height:1}
+        .game-title{font-size:32px;color:#ffab40;text-shadow:2px 2px 0 #d84315,-1px -1px 0 #fff;letter-spacing:2px;margin:0 10px;white-space:nowrap}
+        .multiplier-badge{background:linear-gradient(45deg,#f44336,#d32f2f);color:#fff;padding:4px 14px;border-radius:50px;font-size:16px;border:2px solid #fff;box-shadow:0 3px 6px rgba(0,0,0,.3)}
+        #game-area{flex-grow:1;position:relative;background-color:#81c784;background-image:radial-gradient(#66bb6a 10%,transparent 11%),radial-gradient(#66bb6a 10%,transparent 11%);background-size:30px 30px;background-position:0 0,15px 15px;border-radius:0;margin:0 12px 12px 12px;box-shadow:inset 0 0 20px rgba(0,0,0,.3);border:4px solid #558b2f;overflow:hidden}
+        canvas{display:block;width:100%;height:100%}
+        #rules-panel, .log-panel-container {width:100%;background:rgba(255,255,255,.95);border:4px solid #8e24aa;border-radius:16px;padding:10px;margin-bottom:10px;font-size:14px;color:#4a148c;box-shadow:0 5px 10px rgba(0,0,0,.2)}
+        .log-panel-container { padding: 0; height: 100%; display: flex; flex-direction: column; }
+        #log-content { flex-grow: 1; overflow-y: auto; padding: 10px; font-size: 12px; }
+        .log-entry { display: flex; align-items: center; gap: 8px; padding: 4px 2px; border-bottom: 1px solid #e0e0e0; }
+        .log-entry span:first-child { font-size: 16px; }
+        .log-entry .msg { flex: 1; }
+        .log-entry .time { color: #999; font-size: 10px; }
+        #card-box{width:160px;height:500px;background:rgba(255,255,255,.2);border:4px solid rgba(33,150,243,.5);border-radius:12px 12px 0 0;border-bottom:10px solid #1565c0;position:relative;margin-bottom:10px;overflow:hidden}
+        #stack-inner{position:absolute;bottom:0;left:0;width:100%;height:100%;pointer-events:none}
+        .stacked-card{position:absolute;left:20px;bottom:0;width:110px;height:35px;background:linear-gradient(to bottom right,#fff9c4,#fff176);border:1px solid #fbc02d;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.2);display:flex;justify-content:center;align-items:center;font-size:12px;color:#e65100;font-weight:700;transition:transform .3s}
+        .stacked-card::after{content:'★ TICKET'}
+        #card-counter-panel{background:#37474f;color:#ffeb3b;padding:8px 20px;border-radius:20px;border:3px solid #546e7a;font-family:monospace;font-weight:700;font-size:24px;margin-bottom:15px;box-shadow:0 5px 10px rgba(0,0,0,.4)}
+        #control-panel{width:100%;background:#fff;border-radius:16px;padding:15px;box-shadow:0 5px 15px rgba(0,0,0,.1);gap:10px;display:flex;flex-direction:column}
+        .ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;z-index:30;padding-bottom:160px}
+        #map-name-badge{position:absolute;top:15px;left:15px;background:rgba(0,0,0,.6);color:#fff;padding:6px 12px;border-radius:15px;font-size:14px;pointer-events:none;border:2px solid rgba(255,255,255,.8);text-shadow:1px 1px 2px #000}
+        .btn{background:linear-gradient(to bottom,#ffca28,#ff6f00);border:3px solid #fff;color:#fff;border-radius:50px;cursor:pointer;pointer-events:auto;box-shadow:0 5px 0 #e65100,0 8px 15px rgba(0,0,0,.3);font-family:'Zcool KuaiLe',cursive;transition:transform .1s}
+        .btn:active{transform:translateY(5px);box-shadow:0 0 0 #e65100}
+        .btn-start{padding:15px 50px;font-size:28px}
+        .btn-group{pointer-events:auto;display:flex;gap:12px;margin-bottom:10px;align-items:center}
+        .btn-bet{width:60px;height:60px;font-size:20px;background:linear-gradient(to bottom,#4fc3f7,#0288d1)}
+        .btn-launch{background:linear-gradient(to bottom,#66bb6a,#2e7d32);padding:8px 24px;font-size:18px;min-width:120px}
+        #reset-btn{pointer-events:auto;position:absolute;top:15px;right:15px;background:linear-gradient(to bottom,#ef5350,#c62828);border:2px solid #fff;color:#fff;padding:8px 20px;border-radius:25px;font-size:16px;cursor:pointer;display:none;font-family:'Zcool KuaiLe',cursive;z-index:100}
+        #pull-hint{animation:pullDown 1.5s infinite;text-shadow:2px 2px 4px rgba(0,0,0,.6);font-size:26px;color:#fff}
+        @keyframes pullDown{0%,100%{transform:translateY(0)}50%{transform:translateY(15px)}}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:2000;display:none;justify-content:center;align-items:center;backdrop-filter:blur(5px)}
+        .modal-box{background:#fff;width:90%;max-width:450px;max-height:85vh;border-radius:15px;border:4px solid #7e57c2;box-shadow:0 0 30px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden}
+        .modal-header{background:#7e57c2;color:#fff;padding:15px;font-size:22px;display:flex;justify-content:space-between;align-items:center}
+        .modal-content{padding:20px;overflow-y:auto;background:#f3e5f5}
+        .shop-tabs{display:flex;background:#5e35b1}
+        .shop-tab{flex:1;padding:12px;text-align:center;color:#b39ddb;cursor:pointer;font-size:16px}
+        .shop-tab.active{color:#fff;background:#7e57c2;font-weight:700}
+        .rank-item{display:flex;padding:10px 15px;background:#fff;margin-bottom:8px;border-radius:10px;align-items:center;border:1px solid #e0e0e0}
+        .rank-item.mine{border:2px solid #ffa726;background:#fff8e1}
+        .rank-num{width:35px;font-weight:700;color:#78909c;font-size:18px}
+        #message{position:absolute;top:35%;left:50%;transform:translateX(-50%) scale(0);background:rgba(0,0,0,.9);border:4px solid #ffeb3b;border-radius:20px;padding:30px 50px;color:#fff;font-size:32px;transition:.3s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;z-index:100;box-shadow:0 15px 40px rgba(0,0,0,.6);white-space:nowrap}
+        #message.show{transform:translateX(-50%) scale(1)}
+        .coin-particle{position:fixed;width:30px;height:30px;background:radial-gradient(#ffd700,#ff8f00);border:2px solid #ffe082;border-radius:50%;display:flex;justify-content:center;align-items:center;color:#b0003a;font-weight:700;font-size:18px;z-index:3000;box-shadow:0 0 10px rgba(255,215,0,.6);pointer-events:none}
+        .coin-particle::after{content:'$'}
+        .flying-card{position:fixed;width:80px;height:30px;background:linear-gradient(to bottom right,#fff9c4,#fff176);border:2px solid #ffa000;border-radius:6px;display:flex;justify-content:center;align-items:center;font-size:14px;color:#e65100;font-weight:700;z-index:9999;box-shadow:0 5px 15px rgba(0,0,0,.3);pointer-events:none;transform-origin:center}
+        .skin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+        .skin-item{background:#fff;padding:5px;border-radius:8px;cursor:pointer;border:2px solid transparent;text-align:center}
+        .skin-item:hover{transform:scale(1.05)}
+        .skin-item.selected{border-color:#7e57c2;background:#ede7f6;box-shadow:0 0 8px #7e57c2}
+        .skin-img{width:60px;height:60px;object-fit:cover;border-radius:50%;margin:0 auto;display:block;border:1px solid #ccc;background-color:#eee}
+        #wheel-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:5000;display:none;flex-direction:column;justify-content:center;align-items:center}
+        #wheel-container{position:relative;width:400px;height:400px}
+        #wheel-canvas{width:100%;height:100%;border-radius:50%;border:5px solid #fff;box-shadow:0 0 20px #ffeb3b;transform:rotate(0);transition:transform 4s cubic-bezier(.25,.1,.25,1)}
+        #wheel-pointer{position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:30px solid #ff1744;z-index:10;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+        #spin-btn{margin-top:30px;padding:15px 50px;font-size:28px;background:linear-gradient(to bottom,#ff9800,#e65100);color:#fff;border-radius:50px;border:4px solid #fff;font-weight:700;cursor:pointer;box-shadow:0 5px 15px rgba(0,0,0,.5)}
+        #spin-btn:active{transform:scale(.95)}
+        #spin-result{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:60px;color:#fff;font-weight:700;text-shadow:0 0 10px #000;pointer-events:none;display:none;z-index:20}
+        #egg-game-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 4000; display: none; pointer-events: auto; }
+        .golden-egg { position: absolute; width: 100px; height: 130px; background: radial-gradient(circle at 30% 30%, #ffd700, #ff8f00); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; box-shadow: 0 10px 20px rgba(0,0,0,0.5); cursor: pointer; transform-origin: bottom center; transition: transform 0.2s; }
+        .golden-egg:hover { transform: scale(1.05); filter: brightness(1.1); }
+        .egg-hammer { position: absolute; width: 60px; height: 60px; font-size: 40px; pointer-events: none; z-index: 4002; display: none; text-shadow: 2px 2px 0 #000; }
+        .egg-cracked { background: radial-gradient(circle at 30% 30%, #ffe082, #ff6f00) !important; clip-path: polygon(0% 0%, 100% 0%, 100% 60%, 75% 40%, 50% 70%, 25% 40%, 0% 60%); }
+        .egg-prize-icon { position: absolute; font-size: 50px; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 4001; opacity: 0; transition: opacity 0.5s; text-shadow: 0 0 10px #fff; font-weight: bold; }
+        @keyframes eggFall { 0% { top: -200px; transform: scale(0.5); opacity: 0; } 60% { top: 40%; transform: scale(1.1); opacity: 1; } 80% { top: 35%; transform: scale(1.05); } 100% { top: 40%; transform: scale(1); } }
+        @keyframes eggBounce { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-20px) scale(0.95, 1.05); } }
+        @keyframes rotateExit { 0% { transform: scale(1) rotate(0deg); opacity: 1; } 100% { transform: scale(0) rotate(720deg); opacity: 0; } }
+        .contact-chip { display: inline-block; background: #e0f2f1; color: #00695c; border: 1px solid #b2dfdb; border-radius: 16px; padding: 4px 12px; margin: 4px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .contact-chip:hover { background: #b2dfdb; }
+        .contact-chip.selected { background: #4db6ac; color: white; border-color: #00897b; }
+    </style>
+</head>
+<body>
+
+<!-- UI Elements (Auth, Modals, Game Scene) -->
+<div id="auth-overlay" class="modal-overlay" style="display: flex;"><div class="modal-box"><div class="modal-header"><span>🎉 欢迎光临弹珠乐园</span></div><div id="login-form" class="modal-content"><input type="text" id="login-user" class="w-full p-3 mb-3 border-2 border-gray-300 rounded-lg outline-none" placeholder="用户名"><input type="password" id="login-pass" class="w-full p-3 mb-3 border-2 border-gray-300 rounded-lg outline-none" placeholder="密码"><button class="w-full bg-purple-600 text-white p-3 rounded-lg font-bold" onclick="handleLogin()">登录游戏</button><div class="text-purple-600 text-center mt-4 cursor-pointer underline" onclick="toggleAuth('register')">注册新账号</div></div><div id="register-form" class="modal-content hidden"><input type="text" id="reg-user" class="w-full p-3 mb-3 border-2 border-gray-300" placeholder="用户名"><input type="text" id="reg-email" class="w-full p-3 mb-3 border-2 border-gray-300" placeholder="邮箱"><input type="password" id="reg-pass" class="w-full p-3 mb-3 border-2 border-gray-300" placeholder="密码"><button class="w-full bg-green-500 text-white p-3 rounded-lg font-bold" onclick="handleRegister()">立即注册</button><div class="text-purple-600 text-center mt-4 cursor-pointer underline" onclick="toggleAuth('login')">返回登录</div></div></div></div>
+<div id="shop-overlay" class="modal-overlay"><div class="modal-box" style="width: 90%; max-width: 550px;"><div class="modal-header"><span>🎁 综合商城</span><button onclick="closeModal('shop-overlay')" class="text-xl">×</button></div><div class="shop-tabs"><div class="shop-tab active" onclick="switchShopTab('list')">礼物列表</div><div class="shop-tab" onclick="switchShopTab('skin')">皮肤装扮</div><div class="shop-tab" onclick="switchShopTab('history')">兑换记录</div></div><div id="shop-list-panel" class="modal-content" style="height: 450px;"><div id="gift-grid" class="grid grid-cols-2 gap-3"></div></div><div id="shop-skin-panel" class="modal-content hidden" style="height: 450px;"><div id="skin-grid" class="skin-grid"></div></div><div id="shop-history-panel" class="modal-content hidden" style="height: 450px;"><div id="history-list"></div></div></div></div>
+<div id="rank-overlay" class="modal-overlay"><div class="modal-box"><div class="modal-header" style="background:#ffa726;"><span>🏆 全服风云榜</span><button onclick="closeModal('rank-overlay')" class="text-xl">×</button></div><div id="rank-list" class="modal-content" style="height: 400px;"></div><div id="my-rank-bar" class="p-3 bg-orange-100 text-orange-800 font-bold flex justify-between text-lg"><span>我的排名: --</span><span>-- 票</span></div></div></div>
+<div id="gift-transfer-overlay" class="modal-overlay"><div class="modal-box"><div class="modal-header" style="background:#4caf50;"><span>💸 赠送积分</span><button onclick="closeModal('gift-transfer-overlay')" class="text-xl">×</button></div><div class="modal-content"><div class="mb-4"><label class="block font-bold mb-1">接收用户</label><div id="recent-contacts" class="mb-2"></div><select id="transfer-to-user" class="w-full border p-2 rounded"></select></div><div class="mb-4"><label class="block font-bold mb-1">赠送数量</label><input type="number" id="transfer-amount" class="w-full border p-2 rounded" placeholder="输入积分数量"></div><div class="text-sm text-gray-500 mb-4">注意: 赠送后无法撤销。</div><button onclick="confirmTransfer()" class="w-full bg-green-600 text-white p-3 rounded font-bold shadow">确认赠送</button></div></div></div>
+
+<!-- Lucky Wheel Overlay -->
+<div id="wheel-overlay">
+    <h2 class="text-white text-4xl font-bold mb-8 drop-shadow-lg">🌟 幸运大转盘 🌟</h2>
+    <div id="wheel-container">
+        <canvas id="wheel-canvas" width="400" height="400"></canvas>
+        <div id="wheel-pointer"></div>
+        <div id="spin-result"></div>
+    </div>
+    <button id="spin-btn" onclick="spinWheel()">立即抽奖</button>
+</div>
+
+<!-- Golden Egg Minigame Overlay -->
+<div id="egg-game-overlay">
+    <div id="egg-container" style="position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;"></div>
+    <div id="egg-msg" style="position: absolute; bottom: 20%; width: 100%; text-align: center; color: white; font-size: 30px; text-shadow: 0 2px 5px black; display: none;">请点击一个金蛋砸开！</div>
+</div>
+
+<!-- Menu button moved here -->
+<div id="menu-toggle" onclick="toggleMenu()">
+    <div class="line line1"></div>
+    <div class="line line2"></div>
+    <div class="line line3"></div>
+</div>
+<div id="menu-overlay" onclick="toggleMenu()"></div>
+
+<div id="scene">
+    <!-- Side Panels for Mobile -->
+    <div id="log-panel">
+        <div class="log-panel-container">
+            <h3 class="text-center text-lg text-purple-700 font-bold border-b-2 border-purple-200 pb-2 m-2">事件日志</h3>
+            <div id="log-content"></div>
+        </div>
+    </div>
+    <div id="side-panel">
+        <div id="rules-panel">
+            <h3 class="text-center text-lg text-purple-700 font-bold border-b-2 border-purple-200 pb-2 mb-2">玩家信息</h3>
+            <div class="flex justify-between items-center mb-2">
+                <span>用户: <span id="user-display" class="font-bold text-purple-700">未登录</span></span>
+                <button onclick="manualSync()" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded border border-indigo-300 hover:bg-indigo-200" title="从服务器同步最新数据">🔄 同步</button>
+            </div>
+            <div class="mb-2 text-xs text-gray-500">点击同步按钮获取最新余额</div>
+        </div>
+        <div id="card-box"><div id="stack-inner"></div></div><div id="card-counter-panel"><div style="font-size:12px; color:#ccc;">当前积分</div><div id="total-tickets">0</div></div>
+        <div id="control-panel"><div class="flex gap-2"><input type="text" id="redeem-input" class="flex-1 border border-gray-300 rounded px-2 py-1 outline-none" placeholder="兑换码"><button id="redeem-btn" class="bg-green-500 text-white rounded px-3 font-bold hover:bg-green-600" onclick="redeemCoins()">兑</button></div>
+        <div class="flex gap-2 mt-2 items-center">
+            <input type="number" id="exchange-points" class="flex-1 border border-gray-300 rounded px-2 py-1 outline-none" placeholder="消耗积分">
+            <button onclick="exchangePointsToCoins()" class="bg-blue-500 text-white rounded px-3 font-bold hover:bg-blue-600 text-xs py-1">换金币</button>
+        </div>
+        <div class="text-xs text-gray-500 text-center">当前汇率: 1积分 = <span id="rate-display">0.1</span> 金币</div>
+
+        <button class="w-full bg-green-600 text-white p-2 rounded-lg font-bold hover:bg-green-700 shadow-md mt-2" onclick="openTransferModal()">💸 赠送积分</button>
+        <button class="w-full bg-orange-500 text-white p-2 rounded-lg font-bold hover:bg-orange-600 shadow-md mt-2" onclick="openModal('shop-overlay')">🎁 商城 & 皮肤</button><button class="w-full bg-yellow-500 text-white p-2 rounded-lg font-bold hover:bg-yellow-600 shadow-md" onclick="openModal('rank-overlay')">🏆 排行榜</button><button class="w-full bg-gray-400 text-white p-2 rounded-lg text-sm hover:bg-gray-500" onclick="handleLogout()">退出登录</button></div>
+    </div>
+
+    <!-- Main Game Wrapper -->
+    <div id="game-wrapper">
+        <!-- Menu toggle is now outside -->
+        <div id="top-panel"><div class="screw tl"></div><div class="screw tr"></div><div class="panel-row"><div class="display-box"><div class="display-label">金币</div><div class="display-value" id="balance">--</div></div><div class="game-title">七彩弹珠</div><div class="display-box"><div class="display-label">下注</div><div class="display-value" id="current-bet" style="color:#69f0ae">0</div></div></div><div class="panel-row" style="justify-content: center;"><div class="display-box" style="border-color: #ffeb3b; width: 70%; min-width: 200px;"><div class="display-label" style="color: #fff59d;">预期返还</div><div class="display-value" id="potential-win" style="color:#ffff00; font-size: 26px;">0</div></div></div><div class="panel-row mt-2" style="justify-content: center; gap: 20px;"><div class="text-base text-white shadow-sm">亮灯: <span id="lights-count" class="text-yellow-300 text-xl font-bold">?</span></div><div class="multiplier-badge">倍率: x<span id="multiplier-val">?</span></div></div></div>
+        <div id="game-area">
+            <canvas id="gameCanvas"></canvas>
+            <div id="ticket-source" style="position: absolute; bottom: 50px; left: 50%; width: 1px; height: 1px;"></div>
+            <div id="map-name-badge">地图加载中...</div>
+            <div id="uiLayer" class="ui-overlay"><button id="reset-btn" onclick="resetStuckBall()">↻ 卡球复位</button><div id="message"></div><div id="start-controls" class="btn-group"><button id="startBtn" class="btn btn-start">投币开始 (1金币)</button></div><div id="betting-controls" class="btn-group" style="display:none;"><button onclick="addBet(-5)" class="btn btn-bet">-5</button><button onclick="addBet(-1)" class="btn btn-bet">-1</button><button id="launchReadyBtn" class="btn btn-launch">发射准备</button><button onclick="addBet(1)" class="btn btn-bet">+1</button><button onclick="addBet(5)" class="btn btn-bet">+5</button></div><div id="pull-hint" style="display:none; margin-bottom: 30px;">↓ 下拉弹簧发射 ↓</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- Mobile Menu Toggle ---
+function toggleMenu() {
+    const logPanel = document.getElementById('log-panel');
+    const sidePanel = document.getElementById('side-panel');
+    const menuToggle = document.getElementById('menu-toggle');
+    const overlay = document.getElementById('menu-overlay');
+    
+    const isOpen = logPanel.classList.contains('open') || sidePanel.classList.contains('open');
+    
+    if (isOpen) {
+        logPanel.classList.remove('open');
+        sidePanel.classList.remove('open');
+        menuToggle.classList.remove('open');
+        overlay.classList.remove('show');
+    } else {
+        logPanel.classList.add('open');
+        sidePanel.classList.add('open');
+        menuToggle.classList.add('open');
+        overlay.classList.add('show');
+    }
+}
+
+// --- Audio System ---
+const audio={ctx:null, masterVolume:1.0, init:function(){if(!this.ctx&&(window.AudioContext||window.webkitAudioContext))this.ctx=new (window.AudioContext||window.webkitAudioContext)();if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();}, playTone:function(f,t,d,s=0,v=0.1){if(!this.ctx)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=t;o.frequency.setValueAtTime(f,this.ctx.currentTime+s);const fv=v*this.masterVolume;g.gain.setValueAtTime(fv,this.ctx.currentTime+s);g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+s+d);o.connect(g);g.connect(this.ctx.destination);o.start(this.ctx.currentTime+s);o.stop(this.ctx.currentTime+s+d);}, launch:function(){if(!this.ctx)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.frequency.setValueAtTime(200,this.ctx.currentTime);o.frequency.exponentialRampToValueAtTime(800,this.ctx.currentTime+0.3);g.gain.setValueAtTime(0.3*this.masterVolume,this.ctx.currentTime);g.gain.linearRampToValueAtTime(0,this.ctx.currentTime+0.3);o.connect(g);g.connect(this.ctx.destination);o.start();o.stop(this.ctx.currentTime+0.3);}, bump:function(type){if(type==='wood'){this.playTone(200+Math.random()*50,'triangle',0.1,0,0.2);}else if(type==='rubber'){this.playTone(600+Math.random()*200,'sine',0.15,0,0.25);}else if(type==='gold'){this.playTone(1200+Math.random()*200,'square',0.1,0,0.15);}else{this.playTone(800+Math.random()*200,'square',0.05,0,0.15);}}, wall:function(){this.playTone(100,'sawtooth',0.05,0,0.2);}, enterSlot:function(){this.playTone(400,'sine',0.2,0,0.2);this.playTone(300,'sine',0.2,0.1,0.2);}, win:function(){[523.25,659.25,783.99,1046.50].forEach((f,i)=>this.playTone(f,'triangle',0.3,i*0.1,0.2));}, lose:function(){this.playTone(300,'sawtooth',0.3,0,0.2);this.playTone(200,'sawtooth',0.4,0.2,0.2);}, coin:function(){this.playTone(1600+Math.random()*200,'sine',0.1,0,0.05);this.playTone(2000,'square',0.05,0.02,0.05);}, ticket:function(){this.playTone(1200,'square',0.05,0,0.05);}, eggCrack: function(){this.playTone(100,'sawtooth',0.1,0,0.5);this.playTone(800,'square',0.2,0.1,0.3);}};
+
+const API_URL='http://127.0.0.1:5000/api', TICKET_EXCHANGE_RATE=30;
+let currentUser=null, currentSkin='default', activeMapPool=[], ballSkinImg=new Image();
+let gameConfig = {
+    slot_count: 14,
+    light_rules: {"1":5,"2":10,"3":20,"4":30,"5":35},
+    multiplier_rules: {"1":10,"2":5,"3":4,"4":3,"5":2},
+    lucky_wheel: {enabled:true, min:-20, max:100, prob:0.3},
+    bomb_config: {prob:0.3, count_min:1, count_max:3},
+    coin_config: {temp_prob:0.5, temp_min:2, temp_max:5, temp_val:10, fixed_prob:0.3, fixed_min:1, fixed_max:3, fixed_val:5},
+    egg_config: {appear_prob: 0.2, count_min: 1, count_max: 1, probs: {coin: 0.4, ticket: 0.4, mouse: 0.2}, rewards: {coin: 100, ticket: 50}, penalties: {coin: 50, ticket: 20}},
+    exchange_rate: 0.1
+};
+
+// --- Logging System ---
+function logEvent(message, type = 'info') {
+    if (!currentUser) return;
+    const logKey = `log_${currentUser}`;
+    let logs = JSON.parse(localStorage.getItem(logKey) || '[]');
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+    logs.unshift({ message, type, timestamp });
+    if (logs.length > 100) {
+        logs.length = 100;
+    }
+    localStorage.setItem(logKey, JSON.stringify(logs));
+    renderLog();
+}
+
+function renderLog() {
+    if (!currentUser) return;
+    const logKey = `log_${currentUser}`;
+    const logs = JSON.parse(localStorage.getItem(logKey) || '[]');
+    const logContent = document.getElementById('log-content');
+    logContent.innerHTML = logs.map(entry => {
+        let icon = 'ℹ️';
+        switch(entry.type) {
+            case 'coin': icon = '💰'; break;
+            case 'ticket': icon = '🎟️'; break;
+            case 'win': icon = '🎉'; break;
+            case 'lose': icon = '😞'; break;
+            case 'bomb': icon = '💥'; break;
+            case 'event': icon = '🌟'; break;
+            case 'exchange': icon = '🔄'; break;
+            case 'transfer': icon = '💸'; break;
+        }
+        return `<div class="log-entry">
+                    <span>${icon}</span>
+                    <span class="msg">${entry.message}</span>
+                    <span class="time">${entry.timestamp}</span>
+                </div>`;
+    }).join('');
+}
+
+
+function toggleAuth(m){document.getElementById('login-form').classList.toggle('hidden',m==='register');document.getElementById('register-form').classList.toggle('hidden',m!=='register');}
+
+async function handleLogin(){
+    audio.init();
+    const u=document.getElementById('login-user').value,p=document.getElementById('login-pass').value;
+    if(!u || !p) return alert("请输入用户名和密码");
+    await doLogin(u, p, true);
+}
+
+async function doLogin(u, p, remember=false) {
+    try{
+        const r=await fetch(`${API_URL}/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+        const d=await r.json();
+        if(d.success){
+            if(remember) saveAuth(u, p);
+            initSession(d.data);
+        }else alert(d.message);
+    }catch(e){alert(e.message);}
+}
+
+function saveAuth(u, p) { localStorage.setItem('danzhu_auth', JSON.stringify({u: u, p: btoa(p)})); }
+function checkAutoLogin() {
+    const auth = localStorage.getItem('danzhu_auth');
+    if(auth) {
+        try { const creds = JSON.parse(auth); if(creds.u && creds.p) { document.getElementById('login-user').value = creds.u; doLogin(creds.u, atob(creds.p), false); } } catch(e) { console.error("Auth parse error"); }
+    }
+}
+
+async function handleRegister(){const u=document.getElementById('reg-user').value,e=document.getElementById('reg-email').value,p=document.getElementById('reg-pass').value;try{const r=await fetch(`${API_URL}/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,email:e,password:p})});const d=await r.json();if(d.success){alert('OK');toggleAuth('login');}else alert(d.message);}catch(e){alert(e.message);}}
+
+function initSession(u){
+    if(!u)return;
+    currentUser=u.username; balance=u.coins; totalTickets=u.tickets||0;
+    currentSkin=u.current_skin||'default'; if(currentSkin!=='default') ballSkinImg.src=currentSkin;
+    document.getElementById('auth-overlay').style.display='none';
+    document.getElementById('user-display').innerText=currentUser;
+    updateUI();
+    renderLog();
+    if(totalTickets>0)for(let i=0;i<Math.min(Math.floor(totalTickets/10),30);i++)addVisualTopCard();
+    fetchConfig();
+}
+function handleLogout(){ localStorage.removeItem('danzhu_auth'); location.reload(); }
+
+async function manualSync() {
+    if(!currentUser) return;
+    try {
+        const r = await fetch(`${API_URL}/my_info?username=${currentUser}`);
+        const d = await r.json();
+        if(d.success && d.data) {
+            logEvent(`同步数据: ${d.data.coins - balance}金币, ${d.data.tickets - totalTickets}积分`, 'event');
+            balance = d.data.coins; totalTickets = d.data.tickets;
+            if(d.data.current_skin && d.data.current_skin !== currentSkin) {
+                currentSkin = d.data.current_skin;
+                if(currentSkin !== 'default') ballSkinImg.src = currentSkin; else ballSkinImg = new Image();
+            }
+            updateUI(); updateCardStackVisual(); showMsg("同步成功", "数据已更新");
+        } else { showMsg("同步失败", "请稍后再试"); }
+    } catch(e) { showMsg("网络错误", "无法连接服务器"); }
+}
+
+async function fetchConfig() {
+    try {
+        const r = await fetch(`${API_URL}/config`);
+        const d = await r.json();
+        if (d) { gameConfig = { ...gameConfig, ...d }; document.getElementById('rate-display').innerText = gameConfig.exchange_rate || 0.1; }
+    } catch(e) { console.error("Config load failed", e); }
+}
+
+async function syncData(){if(!currentUser)return;await fetch(`${API_URL}/update`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,coins:balance,tickets:totalTickets})});}
+function openModal(id){document.getElementById(id).style.display='flex';if(id==='shop-overlay'){loadGifts();loadSkins();}if(id==='rank-overlay')loadRank();}
+function closeModal(id){document.getElementById(id).style.display='none';}
+async function loadGifts(){try{const r=await fetch(`${API_URL}/gifts`);const g=await r.json();document.getElementById('gift-grid').innerHTML=g.map(i=>`<div class="bg-white p-2 rounded border shadow flex flex-col items-center"><img src="${i.image_url||''}" class="w-20 h-20 object-contain mb-2"><div class="font-bold text-sm">${i.name}</div><div class="text-xs text-gray-500">库存: ${i.stock}</div><div class="text-orange-600 font-bold">🎫 ${i.price}</div><button class="w-full mt-1 bg-purple-500 text-white text-xs py-1 rounded" onclick="buyGift(${i.id}, '${i.name}')">兑换</button></div>`).join('');}catch(e){}}
+async function buyGift(id, name){if(!confirm("确认?"))return;try{const r=await fetch(`${API_URL}/exchange_gift`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,gift_id:id})});const d=await r.json();if(d.success){alert('OK');logEvent(`兑换礼物: ${name}`, 'exchange');totalTickets=d.new_tickets;updateUI();loadGifts();}else alert(d.message);}catch(e){}}
+async function loadSkins(){try{const r=await fetch(`${API_URL}/skins`);const s=await r.json();document.getElementById('skin-grid').innerHTML=`<div class="skin-item ${currentSkin==='default'?'selected':''}" onclick="selectSkin('default',this)"><div class="skin-img bg-pink-400"></div><div>默认</div></div>`+s.map(i=>`<div class="skin-item ${currentSkin===i.image_url?'selected':''}" onclick="selectSkin('${i.image_url}',this)"><img src="${i.image_url}" class="skin-img"><div>${i.name}</div></div>`).join('');}catch(e){}}
+async function selectSkin(u,el){document.querySelectorAll('.skin-item').forEach(i=>i.classList.remove('selected'));el.classList.add('selected');currentSkin=u;if(u!=='default')ballSkinImg.src=u;else ballSkinImg=new Image();await fetch(`${API_URL}/set_skin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,skin_url:u})});}
+function switchShopTab(t){['list','skin','history'].forEach(k=>document.getElementById(`shop-${k}-panel`).classList.add('hidden'));document.getElementById(`shop-${t}-panel`).classList.remove('hidden');if(t==='history')loadHistory();}
+async function loadHistory(){try{const r=await fetch(`${API_URL}/my_redemptions?username=${currentUser}`);const l=await r.json();document.getElementById('history-list').innerHTML=l.map(i=>`<div class="border-b p-2 flex justify-between"><span>${i.gift_name}</span><span class="text-orange-500">-${i.cost}</span></div>`).join('');}catch(e){}}
+async function loadRank(){try{const r=await fetch(`${API_URL}/leaderboard?username=${currentUser}`);const d=await r.json();document.getElementById('rank-list').innerHTML=d.leaderboard.map((u,i)=>`<div class="rank-item ${u.username===currentUser?'mine':''}"><span class="rank-num">${i+1}</span><span class="flex-1 ml-2 text-sm">${u.username}<br><span class="text-xs text-gray-400">${u.email||'-'}</span></span><span class="text-orange-600 font-bold">${u.tickets}</span></div>`).join('');document.getElementById('my-rank-bar').innerHTML=`<span>我的排名: ${d.my_rank||'未上榜'}</span><span>${d.my_tickets} 票</span>`;}catch(e){}}
+async function redeemCoins(){const c=document.getElementById('redeem-input').value;if(!c)return;try{const r=await fetch(`${API_URL}/redeem`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,code:c})});const d=await r.json();if(d.success){showMsg("成功",d.message);logEvent(`兑换码获得: ${d.message}`, 'coin');balance=d.new_coins;updateUI();audio.win();}else alert(d.message);}catch(e){}}
+async function exchangePointsToCoins() { const pts = parseInt(document.getElementById('exchange-points').value); if (!pts || pts <= 0) return alert("请输入积分数量"); try { const r = await fetch(`${API_URL}/exchange_points`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser,points:pts})}); const d = await r.json(); if(d.success) { alert(d.message); logEvent(`积分兑换: -${pts}积分, +${d.exchanged_coins}金币`, 'exchange'); balance = d.new_coins; totalTickets = d.new_tickets; updateUI(); audio.coin(); } else { alert(d.message); } } catch(e) { alert("Exchange failed"); } }
+
+async function openTransferModal() {
+    openModal('gift-transfer-overlay');
+    try { const r = await fetch(`${API_URL}/simple_users`); const users = await r.json(); const select = document.getElementById('transfer-to-user'); select.innerHTML = users.filter(u => u !== currentUser).map(u => `<option value="${u}">${u}</option>`).join(''); } catch(e) { alert("加载用户列表失败"); }
+    try { const r = await fetch(`${API_URL}/recent_contacts?username=${currentUser}`); const contacts = await r.json(); const container = document.getElementById('recent-contacts'); if (contacts.length > 0) { container.innerHTML = `<div class="text-xs text-gray-500 mb-1">最近联系人:</div>` + contacts.map(c => `<div class="contact-chip" onclick="selectContact('${c}')">${c}</div>`).join(''); selectContact(contacts[0]); } else { container.innerHTML = ''; } } catch(e) { console.error(e); }
+}
+function selectContact(username) { const select = document.getElementById('transfer-to-user'); select.value = username; document.querySelectorAll('.contact-chip').forEach(el => { el.classList.remove('selected'); if(el.innerText === username) el.classList.add('selected'); }); }
+async function confirmTransfer() { const toUser = document.getElementById('transfer-to-user').value; const amount = parseInt(document.getElementById('transfer-amount').value); if (!toUser || !amount || amount <= 0) return alert("请检查输入"); if (!confirm(`确认赠送 ${amount} 积分给 ${toUser} 吗?`)) return; try { const r = await fetch(`${API_URL}/transfer_tickets`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({from_user: currentUser, to_user: toUser, amount: amount}) }); const d = await r.json(); if (d.success) { alert("赠送成功!"); logEvent(`赠送 ${amount} 积分给 ${toUser}`, 'transfer'); totalTickets = d.new_tickets; updateUI(); closeModal('gift-transfer-overlay'); } else { alert(d.message); } } catch(e) { alert("网络错误"); } }
+
+// --- 游戏引擎 ---
+const canvas=document.getElementById('gameCanvas'), ctx=canvas.getContext('2d');
+const balanceEl=document.getElementById('balance'), currentBetEl=document.getElementById('current-bet');
+const lightsCountEl=document.getElementById('lights-count'), multiplierEl=document.getElementById('multiplier-val');
+const potentialWinEl=document.getElementById('potential-win'), msgDiv=document.getElementById('message');
+const startControls=document.getElementById('start-controls'), bettingControls=document.getElementById('betting-controls');
+const pullHint=document.getElementById('pull-hint'), totalTicketsEl=document.getElementById('total-tickets');
+const stackInner=document.getElementById('stack-inner');
+const ticketSource=document.getElementById('ticket-source'), cardBox=document.getElementById('card-box');
+const resetBtn=document.getElementById('reset-btn'), mapNameEl=document.getElementById('map-name-badge');
+
+const GRAVITY=0.04, FRICTION=0.995, BOUNCE=0.6;
+const STATE={IDLE:0, BETTING:1, READY:2, CHARGING:3, MOVING:4, GAME_OVER:5, EGG_GAME: 6};
+let gameState=STATE.IDLE, width, height, balance=0, totalTickets=0, currentBet=0, currentMultiplier=0;
+let ball={x:0,y:0,r:6,vx:0,vy:0,active:false,trail:[],color:'#f06292',launchPower:0, isFallingThrough:false};
+let plunger={w:45,h:140,yOffset:0,maxPull:160,isDragging:false,startY:0};
+let pegs=[], slots=[], walls=[], particles=[], slotDividers=[], winningSlots=[];
+const CORNER_RADIUS = 90;
+const MATERIALS = {
+    wood: { color: '#8d6e63', colorDark: '#5d4037', power: 0.6 },
+    rubber: { color: '#ff4081', colorDark: '#c2185b', power: 1.5 },
+    metal: { color: '#b0bec5', colorDark: '#546e7a', power: 1.0 },
+    gold: { color: '#ffd700', colorDark: '#ff8f00', power: 1.6 },
+    temp_coin: { color: '#ffeb3b', colorDark: '#fbc02d', power: 1.2 },
+    fixed_coin: { color: '#ffa000', colorDark: '#e65100', power: 1.1 },
+    bomb: { color: '#212121', colorDark: '#000000', power: 0.5 },
+    gold_egg: { color: '#ffd700', colorDark: '#ff6f00', power: 0.8 }
+};
+
+let luckySlotIndex = -1;
+let currentMapKey = '';
+let wheelSegments = [];
+
+function resize(){width=document.getElementById('game-area').clientWidth;height=document.getElementById('game-area').clientHeight;canvas.width=width;canvas.height=height;if(width>0 && pegs.length === 0)initLevel(true);}
+
+async function fetchMaps() {
+    try {
+        const r = await fetch(`${API_URL}/active_maps`);
+        if (!r.ok) throw new Error('API request failed');
+        const m = await r.json();
+        if (m && m.length > 0) {
+            activeMapPool = m.map(map => {
+                if(typeof map.data === 'string' && map.data) {
+                    try { map.data = JSON.parse(map.data); } catch(e) { console.error("Map parse error for key:", map.key, e); map.data = null; }
+                }
+                return map;
+            });
+        } else {
+            throw new Error('API returned no active maps');
+        }
+    } catch(e) {
+        console.error("Failed to fetch maps from API, falling back to default procedural map.", e);
+        activeMapPool = [{key:'CLASSIC_CHAOS',name:'经典混乱',weight:10, data: null}];
+    }
+}
+
+
+function getRandomRubberColor() { return ['#ff4081', '#76ff03', '#00e5ff', '#ffeb3b', '#e040fb'][Math.floor(Math.random()*5)]; }
+
+function getWeightedRandomMap() {
+    if (!activeMapPool || activeMapPool.length === 0) return {key:'CLASSIC_CHAOS',name:'默认地图',weight:10};
+    let totalWeight = 0;
+    activeMapPool.forEach(map => { totalWeight += (map.weight !== undefined ? map.weight : 10); });
+    if (totalWeight <= 0) return activeMapPool[Math.floor(Math.random() * activeMapPool.length)];
+    let random = Math.random() * totalWeight;
+    for (let i = 0; i < activeMapPool.length; i++) {
+        const w = (activeMapPool[i].weight !== undefined ? activeMapPool[i].weight : 10);
+        if (random < w) return activeMapPool[i];
+        random -= w;
+    }
+    return activeMapPool[0];
+}
+
+function initLevel(forceRandom = false){
+    if (activeMapPool.length === 0) return;
+    pegs=[]; slots=[]; walls=[]; slotDividers=[];
+
+    const SLOT_COUNT = parseInt(gameConfig.slot_count || 14);
+    const margin=10, laneW=plunger.w+12, playW=width-laneW-margin;
+    const slotW=(playW-margin)/SLOT_COUNT, slotH=35, slotY=height-slotH-10;
+
+    for(let i=0; i<SLOT_COUNT; i++){
+        slots.push({x:margin+i*slotW,y:slotY,w:slotW,h:slotH,id:i,lit:false,shake:0});
+        if(i<SLOT_COUNT) slotDividers.push({x:margin+(i+1)*slotW-3, y:slotY-20, w:6, h:slotH+20});
+    }
+    const laneX=width-laneW;
+    walls.push({x:laneX,y:150,w:15,h:height-slotH-170});
+
+    const mapConfig = getWeightedRandomMap();
+    mapNameEl.innerText = mapConfig.name;
+    currentMapKey = mapConfig.key;
+
+    const centerX = playW / 2 + margin, centerY = height * 0.35, pegR = 8;
+
+    if (mapConfig.data && mapConfig.data.pegs) {
+        mapConfig.data.pegs.forEach(p => {
+            const peg = {
+                x: p.x, y: p.y, r: p.r, mat: p.mat,
+                type: p.type || 'normal',
+                scale: 1,
+                isMover: p.isMover || false,
+                rotationSpeed: p.rotationSpeed || 0,
+                gravityForce: p.gravity || 0,
+                gravityRadius: p.gravityRadius || 100,
+            };
+
+            if (peg.isMover) {
+                const speed = p.moveSpeed || 1;
+                const range = p.moveRange || 50;
+                peg.moveType = p.moveType || 'horizontal';
+
+                if (peg.moveType === 'horizontal' || peg.moveType === 'diagonal') {
+                    peg.vx = speed;
+                    peg.minX = p.x - range;
+                    peg.maxX = p.x + range;
+                }
+                if (peg.moveType === 'vertical' || peg.moveType === 'diagonal') {
+                    peg.vy = speed;
+                    peg.minY = p.y - range;
+                    peg.maxY = p.y + range;
+                }
+            }
+            pegs.push(peg);
+        });
+        if(mapConfig.data.walls) {
+            mapConfig.data.walls.forEach(w => {
+                walls.push({ x: w.x, y: w.y, w: w.w, h: w.h, mat: w.mat || 'wood' });
+            });
+        }
+    } else {
+        const mode = mapConfig.key;
+        if (mode === 'BONUS_COIN_FIELD') {
+            const rows = 12, cols = 8;
+            const startY = height * 0.15;
+            const gapX = playW / cols;
+            const gapY = (slotY - startY - 50) / rows;
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    let x = margin + gapX/2 + c * gapX + (r%2===0 ? 0 : gapX/2);
+                    let y = startY + r * gapY;
+                    if (Math.random() > 0.15) { pegs.push({x:x, y:y, r:pegR, type:'normal', mat:'temp_coin'}); }
+                    else { pegs.push({x:x, y:y, r:pegR, type:'normal', mat:'rubber', customColor: getRandomRubberColor()}); }
+                }
+            }
+            addRandomPegs(margin, playW, slotY-60, slotY-20, 10, pegR, null, 'rubber');
+        }
+        else if (mode === 'GALTON_BOARD') {
+            const rows=8, startY=height*0.2, gapY=(slotY-startY-120)/rows;
+            for(let r=0;r<rows;r++){ let cols=r+3, startX=centerX-(cols*(pegR*4.2))/2; for(let c=0;c<cols;c++) pegs.push({x:startX+c*pegR*4.2, y:startY+r*gapY, r:pegR, type:'normal', mat:r%2===0?'metal':'rubber', customColor:r%2!==0?getRandomRubberColor():null}); }
+            addRandomPegs(margin, playW, slotY-80, slotY-40, 8, pegR);
+        } else if (mode === 'MOVING_GUARDS') {
+            addRandomPegs(margin, playW, height*0.2, height*0.6, 25, pegR);
+            for(let i=0; i<4; i++) pegs.push({x: centerX, y: height*0.4 + i * 60, r: pegR * 1.5, type: 'mover', mat: 'rubber', customColor: getRandomRubberColor(), vx: (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random()), minX: margin + 20, maxX: playW - 20, isMover: true});
+        } else if (mode === 'BUMPER_CITY') {
+            for(let r=0;r<4;r++) for(let c=0;c<2;c++) {
+                let px=centerX-playW*0.25+c*playW*0.5, py=height*0.25+r*height*0.14, isGold=Math.random()>0.5;
+                pegs.push({x:px+(r%2===0?0:(Math.random()-0.5)*40), y:py, r:pegR*2.2, type:'bumper', mat:isGold?'gold':'rubber', customColor:isGold?null:getRandomRubberColor(), face:true});
+            }
+            addRandomPegs(margin, playW, height*0.2, slotY-50, 30, pegR, centerX, 'rubber');
+        } else if (mode === 'LUCKY_FUNNEL') {
+            for(let i=0; i<10; i++) { pegs.push({x: margin + 30 + i*15, y: height*0.3 + i*25, r: pegR, type:'normal', mat: 'metal', scale:1}); pegs.push({x: playW - 30 - i*15, y: height*0.3 + i*25, r: pegR, type:'normal', mat: 'metal', scale:1}); }
+            pegs.push({x: centerX, y: height*0.3 + 290, r: pegR*1.8, type: 'mover', mat: 'gold', scale: 1, face: true, vx: 3, minX: centerX - 60, maxX: centerX + 60, isMover: true});
+            addRandomPegs(margin, playW, height*0.7, slotY-40, 12, pegR);
+        } else if (mode === 'HEART_MAZE') {
+            const scale = 12;
+            for (let t = 0; t <= Math.PI * 2; t += 0.2) {
+                let x = 16 * Math.pow(Math.sin(t), 3), y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                pegs.push({x: centerX + x * scale, y: centerY + y * scale, r: pegR, type: 'normal', mat: 'rubber', customColor: '#ff4081', scale: 1});
+            }
+            pegs.push({x: centerX, y: centerY, r: pegR*2, type: 'bumper', mat: 'gold', face: true, scale: 1});
+            addRandomPegs(margin, playW, height*0.55, slotY-50, 20, pegR);
+        } else if (mode === 'RAINBOW_STAIRS') {
+            for(let i=0; i<6; i++) { let isLeft = i % 2 === 0, startX = isLeft ? margin + 20 : playW - 120, py = height*0.2 + i * 70; for(let j=0; j<6; j++) pegs.push({x: startX + j*18, y: py + j*5 * (isLeft?1:-1), r: pegR, type: 'normal', mat: 'wood', scale: 1}); }
+            addRandomPegs(margin, playW, height*0.65, slotY-40, 15, pegR, null, 'metal');
+        } else if (mode === 'SMILEY_FACE') {
+            pegs.push({x: centerX - 60, y: centerY - 50, r: pegR*1.5, type: 'mover', mat: 'gold', vx: 2, minX: centerX-90, maxX: centerX-30, isMover: true, face: true, scale: 1});
+            pegs.push({x: centerX + 60, y: centerY - 50, r: pegR*1.5, type: 'mover', mat: 'gold', vx: -2, minX: centerX+30, maxX: centerX+90, isMover: true, face: true, scale: 1});
+            for(let i=0; i<10; i++) { let x = centerX - 80 + i * 18, y = centerY + 50 + Math.pow(i-4.5, 2) * 3; pegs.push({x: x, y: y, r: pegR, type: 'bumper', mat: 'rubber', customColor: '#ffeb3b', scale: 1}); }
+            addRandomPegs(margin, playW, height*0.1, height*0.2, 15, pegR); addRandomPegs(margin, playW, height*0.65, slotY-50, 15, pegR);
+        } else if (mode === 'SPIRAL_GALAXY') {
+            for(let i=0; i<40; i++) { let angle = i * 0.3, dist = 20 + i * 4; pegs.push({x: centerX + Math.cos(angle)*dist, y: centerY + Math.sin(angle)*dist, r: pegR, type: 'normal', mat: 'rubber', customColor: getRandomRubberColor(), scale: 1}); }
+            pegs.push({x: centerX, y: centerY, r: pegR*3, type: 'bumper', mat: 'gold', face: true, scale: 1});
+            addRandomPegs(margin, playW, height*0.1, height*0.2, 15, pegR); addRandomPegs(margin, playW, height*0.7, slotY-30, 15, pegR);
+        } else if (mode === 'DIAMOND_MINE') {
+            for(let r=0; r<4; r++) { for(let c=0; c<3; c++) { let cx = centerX - 100 + c * 100, cy = height * 0.25 + r * 120; pegs.push({x: cx, y: cy-30, r: pegR, mat: 'wood', type:'normal'}); pegs.push({x: cx-30, y: cy, r: pegR, mat: 'wood', type:'normal'}); pegs.push({x: cx+30, y: cy, r: pegR, mat: 'wood', type:'normal'}); pegs.push({x: cx, y: cy+30, r: pegR, mat: 'wood', type:'normal'}); pegs.push({x: cx, y: cy, r: pegR*1.5, mat: 'gold', type:'bumper', scale:1}); } }
+        } else if (mode === 'PACHINKO_FOREST') {
+            for(let r=0; r<15; r++) { let cols = (r % 2 === 0) ? 9 : 8, startX = centerX - (cols-1) * 18; for(let c=0; c<cols; c++) { if (r > 5 && Math.abs(c - cols/2) < 1.5) continue; pegs.push({x: startX + c * 36, y: height*0.15 + r * 30, r: pegR*0.8, mat: 'metal', type:'normal'}); } }
+            pegs.push({x: centerX, y: height*0.7, r: pegR*2, type: 'mover', mat: 'gold', vx: 4, minX: centerX-80, maxX: centerX+80, isMover: true, face: true});
+        } else if (mode === 'BINARY_TREE') {
+            for(let i=0; i<6; i++) { let nodes = i + 1, y = height * 0.2 + i * 80, stepX = playW / (nodes + 1); for(let j=1; j<=nodes; j++) { let x = stepX * j; pegs.push({x: margin + x, y: y, r: pegR*1.2, mat: 'rubber', customColor: '#00e5ff', type:'bumper'}); if (i < 5) { pegs.push({x: margin + x - 15, y: y + 30, r: pegR*0.8, mat: 'metal'}); pegs.push({x: margin + x + 15, y: y + 30, r: pegR*0.8, mat: 'metal'}); } } }
+        } else if (mode === 'METEOR_SHOWER') {
+            for(let i=0; i<12; i++) { let y = height * 0.2 + i * 50, speed = 1 + Math.random() * 3, dir = i % 2 === 0 ? 1 : -1; pegs.push({x: centerX, y: y, r: pegR*1.5, type: 'mover', mat: 'wood', vx: speed * dir, minX: margin+20, maxX: playW-20, isMover: true, scale: 1}); }
+            addRandomPegs(margin, playW, height*0.1, height*0.8, 20, pegR);
+        } else if (mode === 'DOUBLE_CROSS') {
+            [{x: playW*0.3 + margin, y: height*0.3}, {x: playW*0.7 + margin, y: height*0.5}].forEach(pt => { for(let k=-3; k<=3; k++) pegs.push({x: pt.x, y: pt.y + k*20, r: pegR, mat: 'metal'}); for(let k=-3; k<=3; k++) pegs.push({x: pt.x + k*20, y: pt.y, r: pegR, mat: 'metal'}); pegs.push({x: pt.x, y: pt.y, r: pegR*2, type: 'bumper', mat: 'gold', scale:1}); });
+            addRandomPegs(margin, playW, height*0.6, slotY-30, 30, pegR, null, 'rubber');
+        } else if (mode === 'THE_CAGE') {
+            const cageY = centerY + 50, rad = 80;
+            for(let a=0.5; a<Math.PI*2-0.5; a+=0.3) pegs.push({x: centerX + Math.cos(a)*rad, y: cageY + Math.sin(a)*rad, r: pegR, mat: 'metal'});
+            pegs.push({x: centerX, y: cageY, r: pegR*3, mat: 'rubber', customColor: '#ff4081', type: 'bumper', scale:1});
+            addRandomPegs(margin, playW, height*0.1, height*0.4, 20, pegR);
+        } else if (mode === 'SLALOM_RUN') {
+            for(let i=0; i<8; i++) { let isRight = i % 2 !== 0, x = isRight ? playW - 60 : margin + 60, y = height * 0.15 + i * 70; pegs.push({x: x, y: y, r: pegR*2.5, mat: 'wood', type: 'normal'}); pegs.push({x: centerX, y: y + 35, r: pegR, mat: 'rubber', customColor: getRandomRubberColor()}); }
+        } else if (mode === 'CHAOS_VORTEX') {
+            for(let i=0; i<3; i++) { let rad = 40 + i*40, count = 8 + i*6; for(let j=0; j<count; j++) { let ang = (Math.PI*2 / count) * j + (i*0.5); pegs.push({x: centerX + Math.cos(ang)*rad, y: centerY + Math.sin(ang)*rad, r: pegR, mat: 'rubber', customColor: getRandomRubberColor()}); } }
+            pegs.push({x: centerX, y: centerY, r: pegR*2, mat: 'gold', type: 'bumper'});
+        } else if (mode === 'SPACE_INVADERS') {
+            for(let r=0; r<3; r++) { let y = height * 0.2 + r * 80, count = 5, spacing = playW / (count + 1), dir = (r % 2 === 0) ? 1 : -1; for(let c=1; c<=count; c++) pegs.push({x: margin + c * spacing, y: y, r: pegR*1.5, type: 'mover', mat: 'rubber', vx: dir * 1.5, minX: margin + 20, maxX: playW - 20, isMover: true, face: true, customColor: '#76ff03'}); }
+            for(let c=1; c<=4; c++) { let x = margin + c * (playW/5); pegs.push({x: x-15, y: height*0.6, r: pegR, mat: 'metal'}); pegs.push({x: x, y: height*0.6 - 15, r: pegR, mat: 'metal'}); pegs.push({x: x+15, y: height*0.6, r: pegR, mat: 'metal'}); }
+        } else if (mode === 'PINBALL_WIZARD') {
+            pegs.push({x: centerX, y: height*0.2, r: pegR*3, type: 'bumper', mat: 'gold', scale:1});
+            pegs.push({x: centerX-80, y: height*0.25, r: pegR*2.5, type: 'bumper', mat: 'rubber', customColor: '#ff4081'});
+            pegs.push({x: centerX+80, y: height*0.25, r: pegR*2.5, type: 'bumper', mat: 'rubber', customColor: '#ff4081'});
+            for(let i=0; i<10; i++) { pegs.push({x: margin + 20 + i*10, y: height*0.5 + i*10, r: pegR*0.8, mat: 'wood'}); pegs.push({x: playW - 20 - i*10, y: height*0.5 + i*10, r: pegR*0.8, mat: 'wood'}); }
+            pegs.push({x: margin+40, y: height*0.75, r: pegR*2, type: 'bumper', mat: 'rubber', customColor:'#00e5ff'}); pegs.push({x: playW-40, y: height*0.75, r: pegR*2, type: 'bumper', mat: 'rubber', customColor:'#00e5ff'});
+        } else if (mode === 'DNA_HELIX') {
+            for(let i=0; i<15; i++) { let y = height * 0.15 + i * 40; pegs.push({x: centerX + Math.sin(i * 0.6) * 70, y: y, r: pegR, mat: 'rubber', customColor: '#ff4081'}); pegs.push({x: centerX + Math.sin(i * 0.6 + Math.PI) * 70, y: y, r: pegR, mat: 'rubber', customColor: '#00e5ff'}); if (i % 2 === 0) pegs.push({x: centerX, y: y, r: pegR*0.8, mat: 'metal'}); }
+        } else if (mode === 'PLINKO_PYRAMID') {
+            for(let r=0; r<10; r++) { let cols = r + 1, startX = centerX - (cols * pegR * 5)/2; for(let c=0; c<cols; c++) pegs.push({x: startX + c * pegR * 5 + pegR*2.5, y: height * 0.2 + r * 45, r: pegR, mat: 'metal'}); }
+            pegs.push({x: margin+30, y: height*0.8, r: pegR*2, type:'bumper', mat:'gold'}); pegs.push({x: playW-30, y: height*0.8, r: pegR*2, type:'bumper', mat:'gold'});
+        } else if (mode === 'BLACK_HOLE') {
+            for(let i=0; i<20; i++) { let a = (Math.PI*2 / 20) * i; pegs.push({x: centerX + Math.cos(a) * 120, y: centerY + 50 + Math.sin(a) * 120, r: pegR, mat: 'metal'}); if (Math.sin(a) > -0.5) pegs.push({x: centerX + Math.cos(a) * 100, y: centerY + 50 + Math.sin(a) * 100, r: pegR, mat: 'rubber', customColor: '#7e57c2'}); }
+            addRandomPegs(margin, playW, height*0.1, height*0.3, 2, pegR); pegs.push({x: centerX, y: centerY+50, r: pegR*1.5, type:'bumper', mat:'gold'});
+        } else if (mode === 'TIMELINE_RIVER') {
+            for(let i=0; i<12; i++) { let y = height * 0.15 + i * 50, xBase = centerX + Math.sin(i * 0.8) * 80; pegs.push({x: xBase - 50, y: y, r: pegR, mat: 'wood'}); pegs.push({x: xBase + 50, y: y, r: pegR, mat: 'wood'}); if (i % 3 === 0) pegs.push({x: xBase, y: y, r: pegR*1.2, mat: 'metal'}); else if (i % 3 === 1) pegs.push({x: xBase + 20, y: y, r: pegR*1.5, type:'bumper', mat:'rubber', customColor:'#81d4fa'}); }
+        } else { // Classic Chaos
+            pegs.push({x:centerX, y:centerY+50, r:pegR*2.5, type:'bumper', mat:'gold', scale:1, face: true});
+            addRandomPegs(margin, playW, height*0.15, slotY-50, 45, pegR, centerX);
+        }
+    }
+
+    if (currentMapKey !== 'BONUS_COIN_FIELD') {
+        addCoinPegs(margin, playW, height*0.2, slotY-50, pegR);
+        addBombPegs(margin, playW, height*0.2, slotY-50, pegR);
+        addEggPegs(margin, playW, height*0.2, slotY-50, pegR);
+    }
+
+    resetBall();
+    updateUI();
+}
+
+
+function addCoinPegs(minX, maxX, minY, maxY, r) {
+    const cfg = gameConfig.coin_config;
+    if(Math.random() < cfg.fixed_prob) {
+        const count = Math.floor(Math.random() * (cfg.fixed_max - cfg.fixed_min + 1)) + cfg.fixed_min;
+        for(let i=0; i<count; i++) addSingleRandomPeg(minX, maxX, minY, maxY, r, 'fixed_coin');
+    }
+    if(Math.random() < cfg.temp_prob) {
+        const count = Math.floor(Math.random() * (cfg.temp_max - cfg.temp_min + 1)) + cfg.temp_min;
+        for(let i=0; i<count; i++) addSingleRandomPeg(minX, maxX, minY, maxY, r, 'temp_coin');
+    }
+}
+
+function addBombPegs(minX, maxX, minY, maxY, r) {
+    const cfg = gameConfig.bomb_config;
+    if(Math.random() < cfg.prob) {
+        const count = Math.floor(Math.random() * (cfg.count_max - cfg.count_min + 1)) + cfg.count_min;
+        for(let i=0; i<count; i++) addSingleRandomPeg(minX, maxX, minY, maxY, r, 'bomb');
+    }
+}
+
+function addEggPegs(minX, maxX, minY, maxY, r) {
+    const cfg = gameConfig.egg_config;
+    if (cfg && Math.random() < (cfg.appear_prob || 0.2)) {
+        const min = cfg.count_min || 1; const max = cfg.count_max || 1;
+        const count = Math.floor(Math.random() * (max - min + 1)) + min;
+        for(let i=0; i<count; i++) { addSingleRandomPeg(minX, maxX, minY, maxY, r * 1.5, 'gold_egg'); }
+    }
+}
+
+function addSingleRandomPeg(minX, maxX, minY, maxY, r, mat) {
+    let tries=0;
+    while(tries<20) {
+        let px = minX + r + Math.random() * (maxX - minX - r*2), py = minY + Math.random() * (maxY - minY), overlap = false;
+        for(let p of pegs) if (Math.sqrt((px-p.x)**2+(py-p.y)**2) < (r + p.r + 10)) { overlap=true; break; }
+        if (!overlap) { pegs.push({x:px, y:py, r:r, type:'normal', mat: mat, scale:1}); break; }
+        tries++;
+    }
+}
+
+function addRandomPegs(minX, maxX, minY, maxY, count, r, centerX=null, mat='metal') {
+    for(let i=0; i<count; i++) addSingleRandomPeg(minX, maxX, minY, maxY, r, mat);
+}
+
+function resetBall() {
+    ball.active=false; ball.vx=0; ball.vy=0; ball.trail=[];
+    ball.x = width - 15; ball.y = height - plunger.h - 20; ball.launchPower=0; ball.isFallingThrough = false;
+}
+function resetStuckBall() { if(gameState===STATE.IDLE)return; resetBall(); gameState=STATE.READY; pullHint.style.display='block'; resetBtn.style.display='block'; showMsg("已复位","重新发射"); }
+
+function insertCoin() {
+    if (balance < 1) { showMsg("余额不足!"); return; }
+    balance--;
+    logEvent(`投币 -1 金币`, 'coin');
+    syncData();
+    audio.init();
+    initLevel();
+
+    const rules = gameConfig.light_rules;
+    let n = Math.random() * 100, cumulative = 0, lights = 1;
+    for (let k in rules) { cumulative += parseInt(rules[k]); if (n < cumulative) { lights = parseInt(k); break; } }
+    currentMultiplier = gameConfig.multiplier_rules[lights] || 2;
+    document.getElementById('lights-count').innerText = lights;
+
+    luckySlotIndex = -1;
+    if (gameConfig.lucky_wheel.enabled && Math.random() < gameConfig.lucky_wheel.prob) {
+        luckySlotIndex = Math.floor(Math.random() * parseInt(gameConfig.slot_count));
+    }
+
+    const SLOT_COUNT = parseInt(gameConfig.slot_count);
+    winningSlots=[]; slots.forEach(s => s.lit=false);
+    let idxs=Array.from({length:SLOT_COUNT},(_,k)=>k).sort(()=>Math.random()-0.5);
+    for(let i=0; i<lights; i++) {
+        if (idxs[i] !== 0 && idxs[i] !== SLOT_COUNT - 1) { // Ensure winning slots are not the side ones
+            slots[idxs[i]].lit=true; winningSlots.push(idxs[i]);
+        }
+    }
+
+    currentBet = 1;
+    updateUI();
+    gameState=STATE.BETTING;
+    startControls.style.display='none';
+    bettingControls.style.display='flex';
+    resetBtn.style.display='block';
+
+    if (currentMapKey === 'BONUS_COIN_FIELD') {
+        document.querySelectorAll('.btn-bet').forEach(b => b.style.display = 'none');
+        document.getElementById('launchReadyBtn').innerText = "进入奖励关卡";
+    } else {
+        document.querySelectorAll('.btn-bet').forEach(b => b.style.display = 'block');
+        document.getElementById('launchReadyBtn').innerText = "发射准备";
+    }
+}
+
+function addBet(v) {
+    if (currentMapKey === 'BONUS_COIN_FIELD') return;
+    if (gameState!==STATE.BETTING) return;
+    if (v>0 && balance>=v) { balance-=v; currentBet+=v; logEvent(`下注 +${v} 金币`, 'coin'); }
+    else if (v<0 && currentBet+v>=1) { currentBet+=v; balance-=v; logEvent(`下注 ${v} 金币`, 'coin'); }
+    updateUI();
+}
+function readyLaunch() { gameState=STATE.READY; bettingControls.style.display='none'; pullHint.style.display='block'; }
+
+function checkWin(slotId) {
+    ball.isFallingThrough = true; ball.vx *= 0.2;
+    if (slotId === luckySlotIndex) { showLuckyWheel(); return; }
+    const SLOT_COUNT = parseInt(gameConfig.slot_count);
+    if (slotId === -1 || slotId === 0 || slotId === SLOT_COUNT - 1) { showMsg("落入死角"); logEvent('落入死角', 'lose'); audio.lose(); }
+    else {
+        const hit = slots[slotId] && slots[slotId].lit; audio.enterSlot();
+        if (hit) {
+            let gain=currentBet*currentMultiplier; balance+=gain;
+            let newTickets=Math.floor(gain/TICKET_EXCHANGE_RATE); totalTickets+=newTickets;
+            showMsg(`🎉 中奖! +${gain}`, `获得 ${newTickets} 奖票`);
+            logEvent(`中奖! +${gain}金币, +${newTickets}积分`, 'win');
+            animateTicketsWithFlyout(newTickets); playCoinFlowAnimation(gain); audio.win();
+        } else { showMsg("未中奖"); logEvent('未中奖', 'lose'); audio.lose(); }
+    }
+    syncData(); updateUI();
+    setTimeout(() => { startControls.style.display='flex'; gameState = STATE.IDLE; resetBall(); }, 2500);
+}
+
+function gainCoins(amount) { balance += amount; playCoinFlowAnimation(amount); audio.coin(); syncData(); updateUI(); logEvent(`获得 ${amount} 金币`, 'coin'); }
+
+function handleBombCollision() {
+    createParticles(ball.x, ball.y, '#000', 30); audio.lose(); ball.active = false; gameState = STATE.GAME_OVER; showMsg("💥 炸弹!", "游戏失败"); logEvent('踩中炸弹!', 'bomb'); syncData();
+    setTimeout(() => { startControls.style.display='flex'; gameState = STATE.IDLE; resetBall(); }, 2000);
+}
+
+// --- Egg Game ---
+function startEggGame() {
+    gameState = STATE.EGG_GAME; document.getElementById('egg-game-overlay').style.display = 'block';
+    const container = document.getElementById('egg-container'); container.innerHTML = '';
+    document.getElementById('egg-msg').style.display = 'none';
+
+    for (let i = 0; i < 3; i++) {
+        const egg = document.createElement('div'); egg.className = 'golden-egg';
+        const delay = i * 0.2; egg.style.left = (30 + i * 20) + '%'; egg.style.animation = `eggFall 1s cubic-bezier(0.25, 1, 0.5, 1) forwards ${delay}s, eggBounce 0.5s ease-in-out ${1+delay}s 2`;
+        egg.onclick = (e) => onCrackEgg(e, egg, i);
+        const hammer = document.createElement('div'); hammer.className = 'egg-hammer'; hammer.innerHTML = '🔨'; container.appendChild(hammer);
+        egg.onmouseenter = () => { if(gameState !== STATE.EGG_GAME) return; hammer.style.display = 'block'; hammer.style.left = (egg.offsetLeft + 20) + 'px'; hammer.style.top = (egg.offsetTop - 20) + 'px'; };
+        egg.onmouseleave = () => { hammer.style.display = 'none'; };
+        container.appendChild(egg);
+    }
+    setTimeout(() => { document.getElementById('egg-msg').style.display = 'block'; }, 2500);
+}
+
+function onCrackEgg(e, clickedEgg, index) {
+    if (clickedEgg.classList.contains('cracked')) return;
+    document.querySelectorAll('.golden-egg').forEach(el => el.classList.add('cracked'));
+    document.querySelectorAll('.egg-hammer').forEach(el => el.style.display = 'none');
+    audio.eggCrack(); clickedEgg.style.animation = 'none'; clickedEgg.classList.add('egg-cracked');
+    document.querySelectorAll('.golden-egg').forEach((egg) => { if (egg !== clickedEgg) egg.style.animation = 'rotateExit 1s forwards'; });
+
+    const cfg = gameConfig.egg_config || {}; const rand = Math.random(); const probs = cfg.probs || {coin: 0.4, ticket: 0.4, mouse: 0.2};
+    let resultType = 'coin'; if (rand < probs.coin) resultType = 'coin'; else if (rand < probs.coin + probs.ticket) resultType = 'ticket'; else resultType = 'mouse';
+
+    const icon = document.createElement('div'); icon.className = 'egg-prize-icon'; icon.style.left = clickedEgg.style.left; icon.style.top = '40%';
+    let msgText = '', subText = '';
+
+    if (resultType === 'coin') { const amt = cfg.rewards.coin || 100; icon.innerHTML = '💰'; balance += amt; msgText = `恭喜获得 ${amt} 金币!`; logEvent(`金蛋: +${amt} 金币`, 'coin'); playCoinFlowAnimation(amt); }
+    else if (resultType === 'ticket') { const amt = cfg.rewards.ticket || 50; icon.innerHTML = '🎟️'; totalTickets += amt; msgText = `恭喜获得 ${amt} 积分!`; logEvent(`金蛋: +${amt} 积分`, 'ticket'); animateTicketsWithFlyout(amt); }
+    else { icon.innerHTML = '🐭'; const penCoin = cfg.penalties.coin || 0; const penTick = cfg.penalties.ticket || 0; msgText = '糟糕！小老鼠偷走了奖品！'; if (penCoin > 0 && balance >= penCoin) { balance -= penCoin; subText = `损失 ${penCoin} 金币`; logEvent(`金蛋: -${penCoin} 金币`, 'lose'); } else if (penTick > 0 && totalTickets >= penTick) { totalTickets -= penTick; subText = `损失 ${penTick} 积分`; logEvent(`金蛋: -${penTick} 积分`, 'lose'); } else { subText = "本次一无所获"; logEvent('金蛋: 一无所获', 'lose'); } }
+
+    document.getElementById('egg-container').appendChild(icon); setTimeout(() => icon.style.opacity = '1', 100);
+    document.getElementById('egg-msg').innerHTML = `${msgText}<br><span style="font-size:20px">${subText}</span>`;
+    syncData(); updateUI();
+    setTimeout(() => { document.getElementById('egg-game-overlay').style.display = 'none'; gameState = STATE.MOVING; ball.vy = -5; ball.vx = (Math.random()-0.5) * 4; }, 3000);
+}
+
+// --- Main Update Loop ---
+function update() {
+    if (ball.active && (!Number.isFinite(ball.x) || !Number.isFinite(ball.y))) { resetBall(); return; }
+    pegs.forEach((p, i) => {
+        if (p.isMover) {
+            if (p.vx) {
+                p.x += p.vx;
+                if (p.x < p.minX || p.x > p.maxX) {
+                    p.vx *= -1;
+                    p.x = Math.max(p.minX, Math.min(p.x, p.maxX));
+                }
+            }
+            if (p.vy) {
+                p.y += p.vy;
+                if (p.y < p.minY || p.y > p.maxY) {
+                    p.vy *= -1;
+                    p.y = Math.max(p.minY, Math.min(p.y, p.maxY));
+                }
+            }
+        }
+        if (p.scale > 1) p.scale -= 0.05;
+        if (p.remove) pegs.splice(i, 1);
+    });
+    if (gameState === STATE.CHARGING) { ball.y = (height - plunger.h - 20) + plunger.yOffset; ball.x = width - 15; return; }
+    if (!ball.active || gameState === STATE.EGG_GAME) return;
+
+    if (gameState === STATE.MOVING || ball.active) { ball.trail.push({x: ball.x, y: ball.y}); if (ball.trail.length > 20) ball.trail.shift(); }
+    if (ball.isFallingThrough) { ball.vy += GRAVITY; ball.y += ball.vy; ball.x += ball.vx; return; }
+    if (ball.y > 100 && ball.y < height - 60 && Math.abs(ball.vx) < 0.05 && Math.abs(ball.vy) < 0.05) { ball.vx += (Math.random() - 0.5) * 1.5; ball.vy += 1.0; }
+    ball.vy+=GRAVITY; ball.vx*=FRICTION; ball.vy*=FRICTION; ball.x+=ball.vx; ball.y+=ball.vy;
+
+    const laneX=width-plunger.w-10;
+    if (ball.x<ball.r) { ball.x=ball.r; ball.vx*=-BOUNCE; audio.wall(); }
+    if (ball.x>width-ball.r) { ball.x=width-ball.r; ball.vx*=-BOUNCE; audio.wall(); }
+    if (ball.y>120 && ball.y<height-50) { if (ball.x+ball.r>laneX && ball.x<laneX) { ball.x=laneX-ball.r; ball.vx*=-BOUNCE; audio.wall(); } else if (ball.x-ball.r<laneX+8 && ball.x>laneX+8) { ball.x=laneX+8+ball.r; ball.vx*=-BOUNCE; audio.wall(); } }
+    const filletCX = width - CORNER_RADIUS, filletCY = CORNER_RADIUS;
+    if (ball.x > filletCX && ball.y < filletCY) {
+        const dx = ball.x - filletCX, dy = ball.y - filletCY; let dist = Math.sqrt(dx*dx + dy*dy); if (dist === 0) dist = 0.01;
+        if (dist > CORNER_RADIUS - ball.r) {
+            const overlap = dist - (CORNER_RADIUS - ball.r); ball.x -= overlap * (dx / dist); ball.y -= overlap * (dy / dist);
+            const nx = -dx / dist, ny = -dy / dist, vDotN = ball.vx*nx + ball.vy*ny;
+            if (vDotN < 0) { ball.vx -= 1.6 * vDotN * nx; ball.vy -= 1.6 * vDotN * ny; ball.vx *= 0.98; ball.vy *= 0.98; audio.wall(); }
+        }
+    } else if (ball.y < ball.r) { ball.y = ball.r; ball.vy = Math.abs(ball.vy) * BOUNCE; ball.vx *= 0.9; audio.wall(); }
+
+    pegs.forEach(p => {
+        let dx=ball.x-p.x, dy=ball.y-p.y, dist=Math.sqrt(dx*dx+dy*dy); if (dist === 0) dist = 0.01;
+        if(dist<ball.r+p.r){
+            let angle=Math.atan2(dy,dx); ball.x=p.x+Math.cos(angle)*(ball.r+p.r); ball.y=p.y+Math.sin(angle)*(ball.r+p.r);
+            let nx=dx/dist, ny=dy/dist, v=ball.vx*nx+ball.vy*ny;
+            if(v<0){
+                if (p.mat === 'bomb') { handleBombCollision(); return; }
+                if (p.mat === 'gold_egg') { audio.eggCrack(); startEggGame(); p.remove = true; return; }
+
+                let matPower = MATERIALS[p.mat || 'metal'].power; let j=-(1+matPower)*v;
+                ball.vx+=j*nx; ball.vy+=j*ny; if (p.type === 'mover') ball.vx += p.vx * 0.6;
+                ball.vx+=(Math.random()-0.5) * 0.5; p.scale=1.3; audio.bump(p.mat);
+                if (p.mat === 'temp_coin') { gainCoins(gameConfig.coin_config.temp_val); logEvent('碰到临时金币', 'coin'); p.remove = true; createParticles(ball.x, ball.y, '#ffeb3b', 20); }
+                else if (p.mat === 'fixed_coin') { gainCoins(gameConfig.coin_config.fixed_val); logEvent('碰到固定金币', 'coin'); createParticles(ball.x, ball.y, '#ffa000', 10); }
+                else createParticles(ball.x, ball.y, p.mat==='rubber'?(p.customColor||'#ff4081'):'#ccc', 12);
+            }
+        }
+    });
+    if (!ball.isFallingThrough) {
+        slotDividers.forEach(d=>{
+            if(ball.y+ball.r > d.y && ball.y-ball.r < d.y+d.h && ball.x+ball.r > d.x && ball.x-ball.r < d.x+d.w) {
+                ball.vx = -ball.vx * 0.5; if(ball.x < d.x + d.w/2) ball.x = d.x - ball.r; else ball.x = d.x + d.w + ball.r; audio.wall();
+            }
+            if(ball.x > d.x && ball.x < d.x+d.w && Math.abs((ball.y+ball.r) - d.y) < 5) {
+                 ball.vy = -ball.vy * 1.5; ball.y = d.y - ball.r; audio.wall();
+            }
+        });
+    }
+    if(ball.y > height-ball.r-5 && !ball.isFallingThrough){ let slot=slots.find(s=>ball.x>s.x && ball.x<s.x+s.w); if (slot) { slot.shake=20; checkWin(slot.id); } else if (ball.y>height+20) checkWin(-1); }
+}
+
+// --- Drawing Functions ---
+function drawPeg(p) {
+    let r = p.r * (p.scale || 1);
+    let mat = MATERIALS[p.mat || 'metal'];
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    if (p.angle) { ctx.rotate(p.angle); }
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 4; ctx.shadowOffsetX = 2;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+    let grad = ctx.createRadialGradient(-r*0.3, -r*0.3, r*0.2, 0, 0, r);
+    if (p.mat === 'bomb') { grad.addColorStop(0, '#424242'); grad.addColorStop(0.4, '#000'); grad.addColorStop(1, '#212121'); ctx.fillStyle = grad; ctx.fill(); ctx.fillStyle = 'red'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('💣', 0, 0); }
+    else if (p.mat === 'gold_egg') { grad.addColorStop(0, '#fff176'); grad.addColorStop(1, '#ff6f00'); ctx.fillStyle = grad; ctx.fill(); ctx.fillStyle='#d84315'; ctx.font=`bold ${r*1.2}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🥚', 0, r*0.1); }
+    else if (p.mat === 'temp_coin') { grad.addColorStop(0, '#fff'); grad.addColorStop(0.3, '#ffeb3b'); grad.addColorStop(1, '#fbc02d'); ctx.fillStyle = grad; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle='#fff'; ctx.font='10px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('$',0,0); }
+    else if (p.mat === 'fixed_coin') { grad.addColorStop(0, '#fff'); grad.addColorStop(0.3, '#ffa000'); grad.addColorStop(1, '#e65100'); ctx.fillStyle = grad; ctx.fill(); ctx.fillStyle='#fff'; ctx.font='10px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('G',0,0); }
+    else if (p.mat === 'wood') { grad.addColorStop(0, '#a1887f'); grad.addColorStop(0.5, mat.color); grad.addColorStop(1, mat.colorDark); ctx.fillStyle = grad; ctx.fill(); }
+    else if (p.mat === 'rubber') { let baseColor = p.customColor || mat.color; grad.addColorStop(0, '#fff'); grad.addColorStop(0.3, baseColor); grad.addColorStop(1, mat.colorDark); ctx.fillStyle = grad; ctx.fill(); }
+    else if (p.mat === 'gold') { grad.addColorStop(0, '#fff'); grad.addColorStop(0.2, '#fff9c4'); grad.addColorStop(0.5, '#ffd700'); grad.addColorStop(1, '#e65100'); ctx.fillStyle = grad; ctx.fill(); }
+    else { let gradM = ctx.createLinearGradient(-r, -r, r, r); gradM.addColorStop(0, '#eceff1'); gradM.addColorStop(0.5, '#b0bec5'); gradM.addColorStop(1, '#455a64'); ctx.fillStyle = gradM; ctx.fill(); }
+    ctx.restore();
+}
+
+
+function drawSpring(x, y1, y2, width) {
+    if (y2 <= y1) return;
+    ctx.save(); ctx.beginPath(); ctx.lineWidth = 4; ctx.strokeStyle = '#b0bec5'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    let height = y2 - y1, coils = 12, step = height / coils;
+    ctx.moveTo(x, y1); for (let i = 0; i <= coils; i++) { let cy = y1 + i * step, offset = (i % 2 === 0) ? -width/2 + 4 : width/2 - 4; if (i === 0 || i === coils) offset = 0; ctx.lineTo(x + offset, cy); }
+    ctx.stroke(); ctx.restore();
+}
+
+function draw() {
+    ctx.clearRect(0,0,width,height);
+    const laneX = width - plunger.w - 10;
+    ctx.fillStyle = '#558b2f';
+    walls.forEach(d=>{ ctx.fillStyle = MATERIALS[d.mat || 'wood'].color; ctx.fillRect(d.x, d.y, d.w, d.h); });
+    ctx.fillRect(laneX, 120, 8, height);
+    ctx.save(); ctx.beginPath(); ctx.moveTo(width, 0); ctx.lineTo(width, CORNER_RADIUS); ctx.arc(width - CORNER_RADIUS, CORNER_RADIUS, CORNER_RADIUS, 0, 1.5 * Math.PI, true); ctx.lineTo(0, 0); ctx.lineTo(width, 0); ctx.closePath(); ctx.fillStyle = '#558b2f'; ctx.fill(); ctx.fillRect(0, 0, width - CORNER_RADIUS, 10); ctx.restore();
+
+    slots.forEach(s => {
+        let sx=0, sy=0; if(s.shake>0){s.shake--; sx=(Math.random()-0.5)*4; sy=(Math.random()-0.5)*4;}
+        if (s.id === 0 || s.id === slots.length - 1) ctx.fillStyle = '#3e2723'; else ctx.fillStyle = s.lit ? '#fdd835' : '#5d4037';
+        if (s.id === luckySlotIndex) { let gradient = ctx.createLinearGradient(s.x, s.y, s.x+s.w, s.y+s.h); gradient.addColorStop(0, "red"); gradient.addColorStop(0.2, "orange"); gradient.addColorStop(0.4, "yellow"); gradient.addColorStop(0.6, "green"); gradient.addColorStop(0.8, "blue"); gradient.addColorStop(1, "violet"); ctx.fillStyle = gradient; }
+        ctx.fillRect(s.x+1+sx, s.y+sy, s.w-2, s.h); ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(s.x+1+sx, s.y+sy, s.w-2, s.h/2);
+        if(s.lit && s.id !== 0 && s.id !== slots.length - 1){ ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.fillText("💰",s.x+s.w/2+sx,s.y+20+sy); }
+        if(s.id === luckySlotIndex) { ctx.fillStyle='#fff'; ctx.font='16px sans-serif'; ctx.textAlign='center'; ctx.fillText("★",s.x+s.w/2+sx,s.y+20+sy); }
+    });
+
+    ctx.fillStyle='#5d4037'; slotDividers.forEach(d=>{ ctx.fillRect(d.x, d.y, d.w, d.h); ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(d.x, d.y, 2, d.h); ctx.fillStyle='#5d4037'; });
+    pegs.forEach(p => drawPeg(p));
+
+    let py = height - plunger.h + plunger.yOffset - 10;
+    ctx.fillStyle='#455a64'; ctx.fillRect(width-plunger.w+5, height-5, plunger.w-10, 5); drawSpring(width - plunger.w + 5 + (plunger.w - 10) / 2, py + 20, height - 5, plunger.w - 16); ctx.fillStyle='#e64a19'; ctx.fillRect(width-plunger.w+5, py, plunger.w-10, 20); ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(width-plunger.w+5, py, (plunger.w-10)/2, 20);
+
+    updateParticles(); drawParticles();
+
+    if (gameState!==STATE.IDLE && Number.isFinite(ball.x) && Number.isFinite(ball.y) && ball.r > 0) {
+        if(ball.trail.length > 0) { ball.trail.forEach((pos,i)=>{ if (Number.isFinite(pos.x)) { ctx.globalAlpha=(i/ball.trail.length)*0.5; ctx.fillStyle=ball.color; ctx.beginPath(); ctx.arc(pos.x, pos.y, ball.r*0.8, 0, Math.PI*2); ctx.fill(); }}); ctx.globalAlpha=1.0; }
+        ctx.save(); ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=5; ctx.shadowOffsetY=3; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+        if (ballSkinImg.complete && ballSkinImg.src) { ctx.clip(); ctx.drawImage(ballSkinImg, ball.x-ball.r, ball.y-ball.r, ball.r*2, ball.r*2); }
+        else { let grad = ctx.createRadialGradient(ball.x-ball.r*0.3, ball.y-ball.r*0.3, ball.r*0.2, ball.x, ball.y, ball.r); grad.addColorStop(0, '#fff'); grad.addColorStop(0.4, '#ff1744'); grad.addColorStop(1, '#b71c1c'); ctx.fillStyle=grad; ctx.fill(); }
+        ctx.restore();
+    }
+}
+
+function createParticles(x,y,c,n){for(let i=0;i<n;i++)particles.push({x:x,y:y,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,life:1,color:c});}
+function updateParticles(){for(let i=particles.length-1;i>=0;i--){let p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.life-=0.04;if(p.life<=0)particles.splice(i,1);}}
+function drawParticles(){ ctx.save(); ctx.shadowBlur = 10; particles.forEach(p=>{ ctx.shadowColor = p.color; ctx.globalAlpha=p.life; ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,5,0,Math.PI*2); ctx.fill() }); ctx.restore(); }
+
+function loop() { if (gameState !== STATE.GAME_OVER) { update(); draw(); } requestAnimationFrame(loop); }
+
+function updateUI() {
+    balanceEl.innerText = balance; currentBetEl.innerText = currentBet; totalTicketsEl.innerText = totalTickets;
+    multiplierEl.innerText = currentMultiplier || '?';
+    potentialWinEl.innerText = (currentMultiplier > 0 ? (currentBet * currentMultiplier) : 0);
+    startControls.style.display = (gameState === STATE.IDLE) ? 'flex' : 'none';
+    bettingControls.style.display = (gameState === STATE.BETTING) ? 'flex' : 'none';
+    resetBtn.style.display = (gameState === STATE.IDLE) ? 'none' : 'block';
+
+    if (currentMapKey === 'BONUS_COIN_FIELD' && gameState === STATE.BETTING) { document.querySelectorAll('.btn-bet').forEach(b => b.style.display = 'none'); }
+}
+
+function showMsg(m1, m2 = "") { msgDiv.innerHTML = `<div style="font-size:32px;color:#ffeb3b;text-shadow:2px 2px 0 #000">${m1}</div><div style="font-size:20px;margin-top:5px;color:#fff">${m2}</div>`; msgDiv.classList.add('show'); setTimeout(() => msgDiv.classList.remove('show'), 2000); }
+
+// --- Visual Effects ---
+function addVisualTopCard() { const card = document.createElement('div'); card.className = 'stacked-card'; card.style.zIndex = stackInner.children.length; card.style.bottom = (stackInner.children.length * 4) + 'px'; card.style.transform = `rotate(${Math.random() * 4 - 2}deg)`; stackInner.appendChild(card); }
+function removeVisualTopCard() { if (stackInner.lastChild) stackInner.lastChild.remove(); }
+function updateCardStackVisual() { stackInner.innerHTML = ''; const visualCount = Math.min(Math.floor(totalTickets / 10), 40); for (let i = 0; i < visualCount; i++) addVisualTopCard(); }
+
+async function animateTicketsWithFlyout(amt) {
+    const n = Math.min(amt, 10);
+    for(let i=0; i<n; i++) {
+        const card = document.createElement('div'); card.className = 'flying-card'; card.innerHTML = `<span>★</span><div style="font-size:10px">TICKET</div>`; document.body.appendChild(card);
+        const startRect = ticketSource.getBoundingClientRect(); const targetBox = cardBox.getBoundingClientRect();
+        card.style.left = startRect.left + 'px'; card.style.top = startRect.top + 'px'; card.style.transform = 'scale(0.1)'; card.style.opacity = '0'; card.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        requestAnimationFrame(() => {
+            card.style.opacity = '1'; card.style.left = (window.innerWidth / 2 - 40) + 'px'; card.style.top = (window.innerHeight / 2 - 20) + 'px'; card.style.transform = 'scale(1.5) rotate(360deg)'; audio.ticket();
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease-in'; card.style.left = (targetBox.left + targetBox.width / 2 - 40) + 'px'; card.style.top = (targetBox.bottom - 50) + 'px'; card.style.transform = 'scale(0.5) rotate(720deg)'; card.style.opacity = '0.8';
+                setTimeout(() => { card.remove(); addVisualTopCard(); }, 600);
+            }, 600);
+        });
+        await new Promise(r => setTimeout(r, 200));
+    }
+}
+
+function playCoinFlowAnimation(amount) {
+    if (amount <= 0) return;
+    const particleCount = Math.min(amount, 50); const duration = 1000 + particleCount * 50; const targetRect = balanceEl.getBoundingClientRect(); const startX = window.innerWidth / 2; const startY = window.innerHeight - 50;
+    let spawned = 0;
+    const interval = setInterval(() => {
+        if (spawned >= particleCount) { clearInterval(interval); return; } spawned++;
+        if (spawned % 3 === 0) audio.coin();
+        const coin = document.createElement('div'); coin.className = 'coin-particle'; coin.style.left = (startX + (Math.random() - 0.5) * 100) + 'px'; coin.style.top = startY + 'px'; document.body.appendChild(coin);
+        const anim = coin.animate([{ transform: `translate(0, 0) scale(0.5)`, opacity: 1 }, { transform: `translate(${targetRect.left + targetRect.width/2 - startX}px, ${targetRect.top + targetRect.height/2 - startY}px) scale(1)`, opacity: 0 }], { duration: 800 + Math.random() * 400, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' });
+        anim.onfinish = () => coin.remove();
+    }, duration / particleCount);
+}
+
+// Lucky Wheel Logic
+function generateWheelSegments() {
+    const { min, max } = gameConfig.lucky_wheel;
+    const segments = [];
+    for (let i = 0; i < 8; i++) {
+        const value = Math.floor(Math.random() * (max - min + 1)) + min;
+        segments.push(value);
+    }
+    return segments;
+}
+
+function spinWheel() {
+    const wheelCanvas = document.getElementById('wheel-canvas');
+    const segCount = wheelSegments.length;
+    const arcSize = 360 / segCount;
+    const targetRotation = (360 * 5) + (Math.random() * 360);
+    wheelCanvas.style.transform = `rotate(${targetRotation}deg)`;
+    document.getElementById('spin-btn').disabled = true;
+
+    setTimeout(() => {
+        const finalAngle = targetRotation % 360;
+        const winningAngle = ((270 - finalAngle) % 360 + 360) % 360;
+        const segmentIndex = Math.floor(winningAngle / arcSize);
+        const win = wheelSegments[segmentIndex];
+
+        document.getElementById('spin-result').innerText = win >= 0 ? `+${win}` : win;
+        document.getElementById('spin-result').style.display = 'block';
+        balance += win;
+        logEvent(`转盘: ${win > 0 ? '+' : ''}${win} 金币`, 'event');
+        updateUI();
+        syncData();
+
+        setTimeout(() => {
+            document.getElementById('wheel-overlay').style.display = 'none';
+            document.getElementById('spin-result').style.display = 'none';
+            wheelCanvas.style.transform = 'rotate(0deg)';
+            document.getElementById('spin-btn').disabled = false;
+            resetBall();
+            gameState = STATE.IDLE;
+            startControls.style.display = 'flex';
+        }, 2000);
+    }, 4000);
+}
+
+function showLuckyWheel() {
+    logEvent('遇到幸运转盘', 'event');
+    wheelSegments = generateWheelSegments();
+    document.getElementById('wheel-overlay').style.display = 'flex';
+    const wCtx = document.getElementById('wheel-canvas').getContext('2d');
+    const cx = 200, cy = 200, r = 190;
+    const segs = wheelSegments.length;
+    const arc = Math.PI * 2 / segs;
+    const colors = ['#FFCDD2', '#F8BBD0', '#E1BEE7', '#D1C4E9', '#C5CAE9', '#BBDEFB', '#B3E5FC', '#FFF9C4'];
+
+    for(let i=0; i<segs; i++) {
+        wCtx.beginPath();
+        wCtx.fillStyle = colors[i % colors.length];
+        wCtx.moveTo(cx, cy);
+        wCtx.arc(cx, cy, r, i*arc, (i+1)*arc);
+        wCtx.fill();
+        wCtx.stroke();
+        wCtx.save();
+        wCtx.translate(cx, cy);
+        wCtx.rotate(i*arc + arc/2);
+        wCtx.textAlign = "right";
+        wCtx.fillStyle = "#333";
+        wCtx.font = "bold 24px Arial";
+        wCtx.fillText(wheelSegments[i], r-20, 10);
+        wCtx.restore();
+    }
+}
+
+
+// Controls
+function touchStart(e) { if(gameState!==STATE.READY&&gameState!==STATE.CHARGING)return; if(e.target.tagName==='BUTTON'||e.target.tagName==='INPUT')return; e.preventDefault(); const t=e.touches?e.touches[0]:e; const rect=canvas.getBoundingClientRect(); if((t.clientX-rect.left)>width*0.6 && (t.clientY-rect.top)>height*0.5){ plunger.isDragging=true; plunger.startY=t.clientY-rect.top; gameState=STATE.CHARGING; audio.init(); } }
+function touchMove(e) { if(!plunger.isDragging)return; e.preventDefault(); const t=e.touches?e.touches[0]:e; const rect=canvas.getBoundingClientRect(); let dy=(t.clientY-rect.top)-plunger.startY; if(dy<0)dy=0; if(dy>plunger.maxPull)dy=plunger.maxPull; plunger.yOffset=dy; }
+function touchEnd(e) { if(!plunger.isDragging)return; plunger.isDragging=false; let power=plunger.yOffset/plunger.maxPull; let back=setInterval(()=>{ plunger.yOffset*=0.5; if(plunger.yOffset<1){plunger.yOffset=0;clearInterval(back);} },20); if(power>0.2){ gameState=STATE.MOVING; ball.active=true; ball.vy=-(5+power*15); ball.vx=0; ball.launchPower=power; pullHint.style.display='none'; audio.launch(); } else gameState=STATE.READY; }
+
+document.getElementById('startBtn').addEventListener('click', insertCoin);
+document.getElementById('launchReadyBtn').addEventListener('click', readyLaunch);
+canvas.addEventListener('mousedown',touchStart); window.addEventListener('mousemove',touchMove); window.addEventListener('mouseup',touchEnd);
+canvas.addEventListener('touchstart',touchStart,{passive:false}); window.addEventListener('touchmove',touchMove,{passive:false}); window.addEventListener('touchend',touchEnd);
+window.addEventListener('resize', resize);
+
+// Init
+window.onload = async function() {
+    checkAutoLogin();
+    await fetchMaps();
+    await fetchConfig();
+    resize();
+    updateUI();
+    loop();
+};
+</script>
+</body>
+</html>

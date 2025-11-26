@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>地图编辑器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f0f2f5; }
+        #editor-wrapper { display: flex; gap: 20px; padding: 20px; }
+        #canvas-container { width: 600px; height: 900px; background-color: #81c784; border: 4px solid #558b2f; border-radius: 20px; box-shadow: inset 0 0 20px rgba(0,0,0,.3); }
+        canvas { display: block; width: 100%; height: 100%; }
+        .panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 300px; }
+        .prop-grid { display: grid; grid-template-columns: 100px 1fr; gap: 10px; align-items: center; }
+    </style>
+</head>
+<body>
+
+<div id="editor-wrapper">
+    <!-- Left Panel: Controls -->
+    <div class="panel h-fit">
+        <h2 class="text-xl font-bold mb-4 border-b pb-2">地图工坊</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">加载地图进行编辑</label>
+                <select id="map-selector" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">地图名称</label>
+                <input type="text" id="map-name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="输入新地图的名称">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">作者</label>
+                <input type="text" id="map-author" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="你的大名">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="saveMap(true)" class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700">覆盖保存</button>
+                <button onclick="saveMap(false)" class="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700">另存为</button>
+            </div>
+        </div>
+
+        <h3 class="text-lg font-bold mt-6 mb-3 border-b pb-2">工具</h3>
+        <div id="tools" class="grid grid-cols-2 gap-2">
+            <button id="tool-select" class="bg-gray-200 py-2 rounded-md">选择</button>
+            <button id="tool-add-peg" class="bg-gray-200 py-2 rounded-md">添加钉子</button>
+            <button id="tool-add-wall" class="bg-gray-200 py-2 rounded-md">添加墙壁</button>
+            <button onclick="deleteSelected()" class="bg-red-500 text-white py-2 rounded-md">删除选中</button>
+            <button onclick="clearCanvas()" class="bg-gray-700 text-white py-2 rounded-md col-span-2">清空画布</button>
+        </div>
+    </div>
+
+    <!-- Center: Canvas -->
+    <div id="canvas-container">
+        <canvas id="editor-canvas"></canvas>
+    </div>
+
+    <!-- Right Panel: Properties -->
+    <div id="properties-panel" class="panel h-fit hidden">
+        <h3 class="text-lg font-bold mb-4 border-b pb-2">属性</h3>
+        <div id="peg-properties" class="space-y-3">
+            <div class="prop-grid">
+                <label class="text-sm">类型</label>
+                <div id="prop-type" class="font-bold"></div>
+            </div>
+            <div class="prop-grid">
+                <label for="prop-radius" class="text-sm">半径</label>
+                <input type="number" id="prop-radius" class="w-full p-1 border rounded">
+            </div>
+            <div class="prop-grid">
+                <label for="prop-material" class="text-sm">材质</label>
+                <select id="prop-material" class="w-full p-1 border rounded"></select>
+            </div>
+            <div class="prop-grid">
+                <label for="prop-restitution" class="text-sm">弹性</label>
+                <input type="range" id="prop-restitution" min="0.1" max="2.0" step="0.1" class="w-full">
+            </div>
+             <div class="border-t pt-3 mt-3 space-y-3">
+                 <div class="prop-grid">
+                    <label for="prop-spin" class="text-sm">旋转速度</label>
+                    <input type="number" id="prop-spin" class="w-full p-1 border rounded" step="0.01" placeholder="e.g., 0.05">
+                </div>
+                <div class="prop-grid">
+                    <label for="prop-gravity" class="text-sm">引力/斥力</label>
+                    <input type="number" id="prop-gravity" class="w-full p-1 border rounded" step="0.1" placeholder="正为引力, 负为斥力">
+                </div>
+            </div>
+            <div class="border-t pt-3 mt-3">
+                 <div class="prop-grid">
+                    <label for="prop-is-mover" class="text-sm font-medium">是否移动</label>
+                    <input type="checkbox" id="prop-is-mover" class="h-5 w-5">
+                </div>
+            </div>
+            <div id="movement-props" class="hidden space-y-3 pl-2 border-l-2 ml-2">
+                 <div class="prop-grid">
+                    <label for="prop-move-type" class="text-sm">方向</label>
+                    <select id="prop-move-type" class="w-full p-1 border rounded">
+                        <option value="horizontal">水平</option>
+                        <option value="vertical">垂直</option>
+                        <option value="diagonal">对角线</option>
+                    </select>
+                </div>
+                <div class="prop-grid">
+                    <label for="prop-move-range" class="text-sm">范围</label>
+                    <input type="number" id="prop-move-range" class="w-full p-1 border rounded" placeholder="移动距离">
+                </div>
+                 <div class="prop-grid">
+                    <label for="prop-move-speed" class="text-sm">速度</label>
+                    <input type="number" id="prop-move-speed" class="w-full p-1 border rounded" placeholder="移动速度">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('editor-canvas');
+const ctx = canvas.getContext('2d');
+const container = document.getElementById('canvas-container');
+
+let pegs = [];
+let walls = [];
+let selectedObject = null;
+let currentTool = 'select';
+let isDragging = false;
+let dragStart = {};
+
+const MATERIALS = { wood: '#8d6e63', rubber: '#ff4081', metal: '#b0bec5', gold: '#ffd700' };
+const LANE_WIDTH = 60;
+
+function resizeCanvas() {
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    draw();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    ctx.fillRect(0, 0, LANE_WIDTH, canvas.height);
+    ctx.fillRect(canvas.width - LANE_WIDTH, 0, LANE_WIDTH, canvas.height);
+
+    pegs.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (p.angle) ctx.rotate(p.angle);
+        ctx.beginPath();
+        ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = MATERIALS[p.mat] || '#000000';
+        ctx.fill();
+        if (p === selectedObject) {
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+        ctx.restore();
+    });
+    walls.forEach(w => {
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(w.x, w.y, w.w, w.h);
+         if (w === selectedObject) {
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(w.x, w.y, w.w, w.h);
+        }
+    });
+}
+
+function getMousePos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+}
+
+function handleMouseDown(e) {
+    const pos = getMousePos(e);
+    if (currentTool === 'add-peg') {
+        pegs.push({ x: pos.x, y: pos.y, r: 10, mat: 'metal', restitution: 1.0, spinSpeed: 0, gravity: 0, isMover: false });
+        draw();
+        return;
+    }
+    if (currentTool === 'add-wall') {
+        walls.push({ x: pos.x, y: pos.y, w: 100, h: 10 });
+        draw();
+        return;
+    }
+
+    selectedObject = null;
+    for (const obj of [...pegs, ...walls].reverse()) {
+        let isHit = false;
+        if(obj.r) {
+            const dist = Math.sqrt((pos.x - obj.x)**2 + (pos.y - obj.y)**2);
+            if (dist < obj.r) isHit = true;
+        } else {
+            if (pos.x > obj.x && pos.x < obj.x + obj.w && pos.y > obj.y && pos.y < obj.y + obj.h) isHit = true;
+        }
+        if (isHit) {
+            selectedObject = obj;
+            isDragging = true;
+            dragStart = { x: pos.x, y: pos.y, objX: obj.x, objY: obj.y };
+            break;
+        }
+    }
+    updatePropertiesPanel();
+    draw();
+}
+
+function handleMouseMove(e) {
+    if (!isDragging || !selectedObject) return;
+    const pos = getMousePos(e);
+    const dx = pos.x - dragStart.x;
+    const dy = pos.y - dragStart.y;
+    selectedObject.x = dragStart.objX + dx;
+    selectedObject.y = dragStart.objY + dy;
+    draw();
+}
+
+function handleMouseUp(e) { isDragging = false; }
+
+function deleteSelected() {
+    if (!selectedObject) return;
+    pegs = pegs.filter(p => p !== selectedObject);
+    walls = walls.filter(w => w !== selectedObject);
+    selectedObject = null;
+    updatePropertiesPanel();
+    draw();
+}
+
+function clearCanvas() {
+    if (confirm('确定要清空所有元素吗？')) {
+        pegs = [];
+        walls = [];
+        selectedObject = null;
+        updatePropertiesPanel();
+        draw();
+    }
+}
+
+function updatePropertiesPanel() {
+    const panel = document.getElementById('properties-panel');
+    const movementPanel = document.getElementById('movement-props');
+    if (!selectedObject) {
+        panel.classList.add('hidden');
+        return;
+    }
+    panel.classList.remove('hidden');
+    
+    const isPeg = !!selectedObject.r;
+    document.getElementById('peg-properties').style.display = isPeg ? 'block' : 'none';
+    if (!isPeg) return;
+
+    document.getElementById('prop-type').textContent = '钉子 (Peg)';
+    document.getElementById('prop-radius').value = selectedObject.r || 0;
+    document.getElementById('prop-material').value = selectedObject.mat || 'metal';
+    document.getElementById('prop-restitution').value = selectedObject.restitution || 1.0;
+    document.getElementById('prop-spin').value = selectedObject.spinSpeed || 0;
+    document.getElementById('prop-gravity').value = selectedObject.gravity || 0;
+    
+    const isMover = selectedObject.isMover || false;
+    document.getElementById('prop-is-mover').checked = isMover;
+    if (isMover) {
+        movementPanel.classList.remove('hidden');
+        document.getElementById('prop-move-type').value = selectedObject.moveType || 'horizontal';
+        document.getElementById('prop-move-range').value = selectedObject.moveRange || 100;
+        document.getElementById('prop-move-speed').value = selectedObject.moveSpeed || 1;
+    } else {
+        movementPanel.classList.add('hidden');
+    }
+}
+
+function setupPropPanelListeners() {
+    document.getElementById('prop-radius').oninput = (e) => { if(selectedObject && selectedObject.r) { selectedObject.r = parseFloat(e.target.value); draw(); } };
+    document.getElementById('prop-material').onchange = (e) => { if(selectedObject) { selectedObject.mat = e.target.value; draw(); } };
+    document.getElementById('prop-restitution').oninput = (e) => { if(selectedObject) selectedObject.restitution = parseFloat(e.target.value); };
+    document.getElementById('prop-spin').oninput = (e) => { if(selectedObject) selectedObject.spinSpeed = parseFloat(e.target.value || 0); };
+    document.getElementById('prop-gravity').oninput = (e) => { if(selectedObject) selectedObject.gravity = parseFloat(e.target.value || 0); };
+    
+    document.getElementById('prop-is-mover').onchange = (e) => {
+        if(selectedObject) {
+            selectedObject.isMover = e.target.checked;
+            updatePropertiesPanel();
+        }
+    };
+    document.getElementById('prop-move-type').onchange = (e) => { if(selectedObject) selectedObject.moveType = e.target.value; };
+    document.getElementById('prop-move-range').oninput = (e) => { if(selectedObject) selectedObject.moveRange = parseFloat(e.target.value || 0); };
+    document.getElementById('prop-move-speed').oninput = (e) => { if(selectedObject) selectedObject.moveSpeed = parseFloat(e.target.value || 0); };
+}
+
+function switchTool(tool) {
+    currentTool = tool;
+    document.querySelectorAll('#tools button').forEach(btn => btn.style.backgroundColor = '#e2e8f0');
+    document.getElementById(`tool-${tool}`).style.backgroundColor = '#a0aec0';
+}
+
+async function loadMapsForSelector() {
+    const selector = document.getElementById('map-selector');
+    selector.innerHTML = '<option value="">-- 新建地图 --</option>';
+    try {
+        const response = await fetch('/api/maps');
+        const maps = await response.json();
+        maps.forEach(map => {
+            const option = document.createElement('option');
+            option.value = map.key;
+            option.textContent = `${map.name} (${map.author})`;
+            selector.appendChild(option);
+        });
+    } catch (e) { console.error("Failed to load maps", e); }
+}
+
+async function loadMapData(key) {
+    if (!key) {
+        clearCanvas();
+        document.getElementById('map-name').value = '';
+        document.getElementById('map-author').value = '';
+        return;
+    }
+    try {
+        const response = await fetch(`/api/map/${key}`);
+        const map = await response.json();
+        const data = JSON.parse(map.data || '{}');
+        pegs = data.pegs || [];
+        walls = data.walls || [];
+        document.getElementById('map-name').value = map.name;
+        document.getElementById('map-author').value = map.author;
+        draw();
+    } catch (e) {
+        console.error("Failed to load map data", e);
+        alert("加载地图数据失败！");
+    }
+}
+
+async function saveMap(isUpdate) {
+    const mapKey = document.getElementById('map-selector').value;
+    const name = document.getElementById('map-name').value;
+    const author = document.getElementById('map-author').value;
+
+    if (!name || !author) {
+        alert("请输入地图名称和作者！");
+        return;
+    }
+
+    // Ensure all properties are clean numbers
+    const cleanPegs = pegs.map(p => ({
+        x: p.x,
+        y: p.y,
+        r: p.r,
+        mat: p.mat,
+        restitution: p.restitution || 1.0,
+        spinSpeed: p.spinSpeed || 0,
+        gravity: p.gravity || 0,
+        isMover: p.isMover || false,
+        moveType: p.moveType || 'horizontal',
+        moveRange: p.moveRange || 0,
+        moveSpeed: p.moveSpeed || 0
+    }));
+
+    const mapData = { pegs: cleanPegs, walls };
+    let url = '/api/maps/save';
+    let body = { name, author, data: mapData };
+
+    if (isUpdate && mapKey) {
+        url = '/api/maps/update';
+        body.key = mapKey;
+    } else if (isUpdate && !mapKey) {
+        alert("请先选择一个地图进行覆盖保存，或使用“另存为”。");
+        return;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert(result.message);
+            if (!isUpdate && result.key) {
+                // After saving as new, reload maps and select the new one
+                await loadMapsForSelector();
+                document.getElementById('map-selector').value = result.key;
+            }
+        } else {
+            alert(`保存失败: ${result.message}`);
+        }
+    } catch (e) {
+        alert(`保存出错: ${e.message}`);
+    }
+}
+
+// Initialization
+window.onload = () => {
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUp);
+
+    document.getElementById('tool-select').onclick = () => switchTool('select');
+    document.getElementById('tool-add-peg').onclick = () => switchTool('add-peg');
+    document.getElementById('tool-add-wall').onclick = () => switchTool('add-wall');
+    
+    const matSelect = document.getElementById('prop-material');
+    Object.keys(MATERIALS).forEach(mat => {
+        matSelect.innerHTML += `<option value="${mat}">${mat}</option>`;
+    });
+
+    setupPropPanelListeners();
+    loadMapsForSelector();
+    document.getElementById('map-selector').onchange = (e) => loadMapData(e.target.value);
+    
+    switchTool('select');
+};
+</script>
+
+</body>
+</html>
